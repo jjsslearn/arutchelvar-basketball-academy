@@ -1,0 +1,170 @@
+.App {
+  max-width: 700px;
+  margin: 40px auto;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  text-align: center;
+}
+
+h1 {
+  margin: 0 0 4px 0;
+  text-align: center;
+  font-size: 2.2rem;
+}
+
+h2 {
+  color: #444;
+  margin: 0 0 24px 0;
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: normal;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+}
+
+form input {
+  padding: 10px;
+  font-size: 15px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  color: #555;
+}
+
+form label input {
+  width: 100%;
+}
+
+button {
+  padding: 12px;
+  font-size: 16px;
+  background-color: #d9534f;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+button:hover {
+  background-color: #c9302c;
+}
+
+p {
+  margin-top: 16px;
+  font-size: 15px;
+}
+.attendance-list {
+  list-style: none;
+  padding: 0;
+}
+
+.attendance-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.present-btn {
+  background-color: #5cb85c;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.absent-btn {
+  background-color: #d9534f;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.fees-list {
+  list-style: none;
+  padding: 0;
+}
+
+.fees-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  margin-bottom: 6px;
+  border-radius: 6px;
+}
+
+.paid-row {
+  background-color: #dff0d8;
+}
+
+.unpaid-row {
+  background-color: #f2dede;
+}
+
+.pay-inputs {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.pay-inputs input {
+  width: 90px;
+  padding: 6px;
+}
+.player-card {
+  border: 2px solid #333;
+  padding: 16px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  page-break-inside: avoid;
+}
+
+.club-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+@media print {
+  .no-print {
+    display: none;
+  }
+}
+.club-logo {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+.attendance-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 16px;
+}
+
+.attendance-table th, .attendance-table td {
+  border: 1px solid #999;
+  padding: 6px 10px;
+  text-align: center;
+}
+
+.attendance-table th {
+  background-color: #f0f0f0;
+}
