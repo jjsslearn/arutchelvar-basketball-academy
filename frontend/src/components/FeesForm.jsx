@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+const API_URL = import.meta.env.VITE_API_URL;
 
 function FeesForm() {
   const [month, setMonth] = useState('');
@@ -19,14 +20,14 @@ function FeesForm() {
   }, [month, category]);
 
   function loadStatus() {
-    fetch(`http://localhost:5000/fees/status?month=${month}&category=${category}`)
+    fetch(`${API_URL}/fees/status?month=${month}&category=${category}`)
       .then((res) => res.json())
       .then((data) => setStudents(data))
       .catch((err) => console.error('Error loading fee status:', err));
   }
 
   function loadTotal() {
-    fetch(`http://localhost:5000/fees/total?month=${month}&category=${category}`)
+    fetch(`${API_URL}/fees/total?month=${month}&category=${category}`)
       .then((res) => res.json())
       .then((data) => setTotal(data.total))
       .catch((err) => console.error('Error loading total:', err));
@@ -41,7 +42,7 @@ function FeesForm() {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/fees', {
+      const response = await fetch(`${API_URL}/fees`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

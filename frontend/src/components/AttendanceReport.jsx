@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+const API_URL = import.meta.env.VITE_API_URL;
 
 function AttendanceReport() {
   const [batches, setBatches] = useState([]);
@@ -7,12 +8,12 @@ function AttendanceReport() {
   const [records, setRecords] = useState([]);
 
   useEffect(() => {
-    fetch('http://localhost:5000/batches').then(r => r.json()).then(setBatches);
+    fetch(`${API_URL}/batches`).then(r => r.json()).then(setBatches);
   }, []);
 
   useEffect(() => {
     if (selectedBatch && month) {
-      fetch(`http://localhost:5000/attendance/monthly?batch_id=${selectedBatch}&month=${month}`)
+      fetch(`${API_URL}/attendance/monthly?batch_id=${selectedBatch}&month=${month}`)
         .then((res) => res.json())
         .then(setRecords)
         .catch((err) => console.error(err));

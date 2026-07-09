@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+const API_URL = import.meta.env.VITE_API_URL;
 
 function BatchManagement() {
   const [coaches, setCoaches] = useState([]);
@@ -24,19 +25,19 @@ function BatchManagement() {
 
 
   function loadCoaches() {
-    fetch('http://localhost:5000/coaches')
+    fetch(`${API_URL}/coaches`)
       .then((res) => res.json())
       .then((data) => setCoaches(data))
       .catch((err) => console.error('Error loading coaches:', err));
   }
   function loadBatches() {
-  fetch('http://localhost:5000/batches')
+  fetch(`${API_URL}/batches`)
     .then((res) => res.json())
     .then((data) => setBatches(data))
     .catch((err) => console.error('Error loading batches:', err));
 }
 function loadAllStudents() {
-  fetch('http://localhost:5000/students')
+  fetch(`${API_URL}/students`)
     .then((res) => res.json())
     .then((data) => setAllStudents(data))
     .catch((err) => console.error('Error loading students:', err));
@@ -47,7 +48,7 @@ function loadAllStudents() {
     setCoachMessage('');
 
     try {
-      const response = await fetch('http://localhost:5000/coaches', {
+      const response = await fetch(`${API_URL}/coaches`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: coachName, phone: coachPhone })
@@ -71,7 +72,7 @@ function loadAllStudents() {
   setBatchMessage('');
 
   try {
-    const response = await fetch('http://localhost:5000/batches', {
+    const response = await fetch(`${API_URL}/batches`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: batchName, coach_id: selectedCoachId })
@@ -95,7 +96,7 @@ async function handleAssignStudent(e) {
   setAssignMessage('');
 
   try {
-    const response = await fetch(`http://localhost:5000/batches/${assignBatchId}/students`, {
+    const response = await fetch(`${API_URL}/batches/${assignBatchId}/students`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ student_id: assignStudentId })
