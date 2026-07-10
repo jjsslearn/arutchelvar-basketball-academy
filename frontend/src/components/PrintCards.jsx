@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-const API_URL = import.meta.env.VITE_API_URL;
+import apiFetch from '../api';
 import logo from '../assets/logo.jpg';
 
 function PrintCards() {
@@ -10,8 +10,8 @@ function PrintCards() {
   const [selectedCoach, setSelectedCoach] = useState('');
 
   useEffect(() => {
-    fetch(`${API_URL}/students`).then(r => r.json()).then(setStudents);
-    fetch(`${API_URL}/coaches`).then(r => r.json()).then(setCoaches);
+    apiFetch('/students').then(r => r.json()).then(setStudents);
+    apiFetch('/coaches').then(r => r.json()).then(setCoaches);
   }, []);
 
   function toggleSelect(id) {

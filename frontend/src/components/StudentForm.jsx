@@ -1,6 +1,5 @@
 import { useState } from 'react';
-const API_URL = import.meta.env.VITE_API_URL;
-
+import apiFetch from '../api';
 function StudentForm() {
   const [formData, setFormData] = useState({
     name: '',
@@ -37,12 +36,10 @@ function StudentForm() {
     setMessage('');
 
     try {
-      const response = await fetch(`${API_URL}/students`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-
+      const response = await apiFetch('/students', {
+  method: 'POST',
+  body: JSON.stringify(formData)
+});
       const data = await response.json();
 
       if (response.ok) {

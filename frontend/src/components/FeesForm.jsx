@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-const API_URL = import.meta.env.VITE_API_URL;
+import apiFetch from '../api';
 
 function FeesForm() {
   const [month, setMonth] = useState('');
@@ -20,14 +20,14 @@ function FeesForm() {
   }, [month, category]);
 
   function loadStatus() {
-    fetch(`${API_URL}/fees/status?month=${month}&category=${category}`)
+    apiFetch(`/fees/status?month=${month}&category=${category}`)
       .then((res) => res.json())
       .then((data) => setStudents(data))
       .catch((err) => console.error('Error loading fee status:', err));
   }
 
   function loadTotal() {
-    fetch(`${API_URL}/fees/total?month=${month}&category=${category}`)
+    apiFetch(`/fees/total?month=${month}&category=${category}`)
       .then((res) => res.json())
       .then((data) => setTotal(data.total))
       .catch((err) => console.error('Error loading total:', err));
@@ -42,17 +42,16 @@ function FeesForm() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/fees`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          student_id: studentId,
-          category,
-          month,
-          amount: payAmount,
-          paid_date: payDate
-        })
-      });
+      const response = await apiFetch('/fees', {
+  method: 'POST',
+  body: JSON.stringify({
+    student_id: studentId,
+    category,
+    month,
+    amount: payAmount,
+    paid_date: payDate
+  })
+});
       const data = await response.json();
 
       if (response.ok) {

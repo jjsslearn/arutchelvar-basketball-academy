@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-const API_URL = import.meta.env.VITE_API_URL;
+import apiFetch from '../api';
 
 function AttendanceForm() {
   const [batches, setBatches] = useState([]);
@@ -10,7 +10,7 @@ function AttendanceForm() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    fetch(`${API_URL}/batches`)
+    apiFetch('/batches')
       .then((res) => res.json())
       .then((data) => setBatches(data))
       .catch((err) => console.error('Error loading batches:', err));
@@ -21,7 +21,7 @@ function AttendanceForm() {
       setStudents([]);
       return;
     }
-    fetch(`${API_URL}/batches/${selectedBatch}/students`)
+    apiFetch(`/batches/${selectedBatch}/students`)
       .then((res) => res.json())
       .then((data) => {
         setStudents(data);
@@ -56,11 +56,10 @@ function AttendanceForm() {
     }));
 
     try {
-      const response = await fetch(`${API_URL}/attendance`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ batch_id: selectedBatch, date, records })
-      });
+      const response = await apiFetch('/attendance', {
+  method: 'POST',
+  body: JSON.stringify({ batch_id: selectedBatch, date, records })
+});
 
       const data = await response.json();
 

@@ -67,6 +67,16 @@ async function initTables() {
       paid_date TEXT NOT NULL
     )
   `);
+  await pool.query(`
+  CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL,
+    student_id INTEGER REFERENCES students(id),
+    created_at TIMESTAMP DEFAULT NOW()
+  )
+`);
 
   console.log('All tables ready.');
 }

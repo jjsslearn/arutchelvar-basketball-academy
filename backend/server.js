@@ -5,6 +5,8 @@ const pool = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 app.use(cors());
 app.use(express.json());
@@ -12,10 +14,87 @@ app.use(express.json());
 app.get('/', (req, res) => {
   res.send('Arutchelvar Basketball Academy backend is running!');
 });
+// Register a new user (used for admin/coach creation, and student self-registration)
+app.post('/auth/register', async (req, res) => {
+  const { username, password, role, student_id } = req.body;
 
+  try {
+    const password_hash = await bcrypt.hash(password, 10);
+
+    const result = await pool.query(
+      `INSERT INTO users (username, password_hash, role, student_id)
+       VALUES ($1, $2, $3, $4) RETURNING id, username, role`,
+      [username, password_hash, role, student_id || null]
+    );
+
+    res.status(201).json({ message: 'User registered successfully', user: result.rows[0] });
+  } catch (err) {
+    if (err.code === '23505') {
+      // Postgres's error code for "unique constraint violated"
+      res.status(400).json({ error: 'Username already taken' });
+    } else {
+      res.status(500).json({ error: err.message });
+    }
+  }
+});
+
+// Login
+app.post('/auth/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    const user = result.rows[0];
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    const passwordMatches = await bcrypt.compare(password, user.password_hash);
+    if (!passwordMatches) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role, student_id: user.student_id },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({ token, user: { id: user.id, username: user.username, role: user.role, student_id: user.student_id } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// Middleware: verifies the token and attaches user info to the request
+function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+
+  const token = authHeader.split(' ')[1]; // "Bearer <token>"
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // attach user info (id, username, role, student_id) to the request
+    next(); // proceed to the actual route
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
+
+// Middleware factory: restricts a route to specific roles
+function requireRole(...allowedRoles) {
+  return (req, res, next) => {
+    if (!allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Access denied for your role' });
+    }
+    next();
+  };
+}
 // ----- STUDENTS -----
 
-app.post('/students', async (req, res) => {
+app.post('/students', requireAuth, requireRole('admin', 'coach', 'student'), async (req, res) => {
   const { name, class: studentClass, school, dob, phone1, phone2, father_name, mother_name, address } = req.body;
   try {
     const result = await pool.query(
@@ -29,7 +108,7 @@ app.post('/students', async (req, res) => {
   }
 });
 
-app.get('/students', async (req, res) => {
+app.get('/students', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM students');
     res.json(result.rows);
@@ -40,7 +119,7 @@ app.get('/students', async (req, res) => {
 
 // ----- COACHES -----
 
-app.post('/coaches', async (req, res) => {
+app.post('/coaches', requireAuth, requireRole('admin'), async (req, res) => {
   const { name, phone } = req.body;
   try {
     const result = await pool.query(
@@ -53,7 +132,7 @@ app.post('/coaches', async (req, res) => {
   }
 });
 
-app.get('/coaches', async (req, res) => {
+app.get('/coaches', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM coaches');
     res.json(result.rows);
@@ -64,7 +143,7 @@ app.get('/coaches', async (req, res) => {
 
 // ----- BATCHES -----
 
-app.post('/batches', async (req, res) => {
+app.post('/batches', requireAuth, requireRole('admin'), async (req, res) => {
   const { name, coach_id } = req.body;
   try {
     const result = await pool.query(
@@ -77,7 +156,7 @@ app.post('/batches', async (req, res) => {
   }
 });
 
-app.get('/batches', async (req, res) => {
+app.get('/batches', requireAuth, requireRole('admin', 'coach', 'student'), async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT batches.id, batches.name, coaches.name AS coach_name
@@ -90,7 +169,7 @@ app.get('/batches', async (req, res) => {
   }
 });
 
-app.post('/batches/:batchId/students', async (req, res) => {
+app.post('/batches/:batchId/students', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
   const { batchId } = req.params;
   const { student_id } = req.body;
   try {
@@ -104,7 +183,7 @@ app.post('/batches/:batchId/students', async (req, res) => {
   }
 });
 
-app.get('/batches/:batchId/students', async (req, res) => {
+app.get('/batches/:batchId/students', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
   const { batchId } = req.params;
   try {
     const result = await pool.query(
@@ -122,7 +201,7 @@ app.get('/batches/:batchId/students', async (req, res) => {
 
 // ----- ATTENDANCE -----
 
-app.post('/attendance', async (req, res) => {
+app.post('/attendance', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
   const { batch_id, date, records } = req.body;
   const client = await pool.connect();
   try {
@@ -144,7 +223,7 @@ app.post('/attendance', async (req, res) => {
   }
 });
 
-app.get('/attendance', async (req, res) => {
+app.get('/attendance', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
   const { batch_id, date } = req.query;
   try {
     const result = await pool.query(
@@ -160,17 +239,25 @@ app.get('/attendance', async (req, res) => {
   }
 });
 
-app.get('/attendance/monthly', async (req, res) => {
+app.get('/attendance/monthly', requireAuth, requireRole('admin', 'coach', 'student'), async (req, res) => {
   const { batch_id, month } = req.query;
   try {
-    const result = await pool.query(
-      `SELECT attendance.student_id, students.name, attendance.date, attendance.status
-       FROM attendance
-       JOIN students ON attendance.student_id = students.id
-       WHERE attendance.batch_id = $1 AND attendance.date LIKE $2
-       ORDER BY students.name, attendance.date`,
-      [batch_id, `${month}%`]
-    );
+    let query = `
+      SELECT attendance.student_id, students.name, attendance.date, attendance.status
+      FROM attendance
+      JOIN students ON attendance.student_id = students.id
+      WHERE attendance.batch_id = $1 AND attendance.date LIKE $2
+    `;
+    const params = [batch_id, `${month}%`];
+
+    if (req.user.role === 'student') {
+      query += ' AND attendance.student_id = $3';
+      params.push(req.user.student_id);
+    }
+
+    query += ' ORDER BY students.name, attendance.date';
+
+    const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -179,7 +266,7 @@ app.get('/attendance/monthly', async (req, res) => {
 
 // ----- FEES -----
 
-app.post('/fees', async (req, res) => {
+app.post('/fees', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
   const { student_id, category, month, amount, paid_date } = req.body;
   try {
     const result = await pool.query(
@@ -193,26 +280,34 @@ app.post('/fees', async (req, res) => {
   }
 });
 
-app.get('/fees/status', async (req, res) => {
+app.get('/fees/status', requireAuth, requireRole('admin', 'coach', 'student'), async (req, res) => {
   const { month, category } = req.query;
   try {
-    const result = await pool.query(
-      `SELECT students.id AS student_id, students.name, students.class,
-              fee_payments.amount, fee_payments.paid_date
-       FROM students
-       LEFT JOIN fee_payments
-         ON students.id = fee_payments.student_id
-         AND fee_payments.month = $1
-         AND fee_payments.category = $2`,
-      [month, category]
-    );
+    let query = `
+      SELECT students.id AS student_id, students.name, students.class,
+             fee_payments.amount, fee_payments.paid_date
+      FROM students
+      LEFT JOIN fee_payments
+        ON students.id = fee_payments.student_id
+        AND fee_payments.month = $1
+        AND fee_payments.category = $2
+    `;
+    const params = [month, category];
+
+    // If a student is asking, only show their own record
+    if (req.user.role === 'student') {
+      query += ' WHERE students.id = $3';
+      params.push(req.user.student_id);
+    }
+
+    const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.get('/fees/total', async (req, res) => {
+app.get('/fees/total', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
   const { month, category } = req.query;
   try {
     const result = await pool.query(
