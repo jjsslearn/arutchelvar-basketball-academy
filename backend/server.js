@@ -16,15 +16,15 @@ app.get('/', (req, res) => {
 });
 // Register a new user (used for admin/coach creation, and student self-registration)
 app.post('/auth/register', async (req, res) => {
-  const { username, password, role, student_id } = req.body;
+  const { username, password, role, student_id, coach_id } = req.body;
 
   try {
     const password_hash = await bcrypt.hash(password, 10);
 
     const result = await pool.query(
-      `INSERT INTO users (username, password_hash, role, student_id)
-       VALUES ($1, $2, $3, $4) RETURNING id, username, role`,
-      [username, password_hash, role, student_id || null]
+      `INSERT INTO users (username, password_hash, role, student_id, coach_id)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id, username, role`,
+      [username, password_hash, role, student_id || null, coach_id || null]
     );
 
     res.status(201).json({ message: 'User registered successfully', user: result.rows[0] });
@@ -56,12 +56,42 @@ app.post('/auth/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role, student_id: user.student_id },
+      { id: user.id, username: user.username, role: user.role, student_id: user.student_id, coach_id: user.coach_id },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
 
-    res.json({ token, user: { id: user.id, username: user.username, role: user.role, student_id: user.student_id } });
+    res.json({ token, user: { id: user.id, username: user.username, role: user.role, student_id: user.student_id, coach_id: user.coach_id } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Change your own password (any logged-in user)
+app.post('/auth/change-password', requireAuth, async (req, res) => {
+  const { newPassword } = req.body;
+  try {
+    const password_hash = await bcrypt.hash(newPassword, 10);
+    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [password_hash, req.user.id]);
+    res.json({ message: 'Password changed successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin resets anyone's password
+app.post('/auth/reset-password', requireAuth, requireRole('admin'), async (req, res) => {
+  const { username, newPassword } = req.body;
+  try {
+    const password_hash = await bcrypt.hash(newPassword, 10);
+    const result = await pool.query(
+      'UPDATE users SET password_hash = $1 WHERE username = $2 RETURNING id',
+      [password_hash, username]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ message: 'Password reset successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -94,7 +124,7 @@ function requireRole(...allowedRoles) {
 }
 // ----- STUDENTS -----
 
-app.post('/students', requireAuth, requireRole('admin', 'coach', 'student'), async (req, res) => {
+app.post('/students', requireAuth, requireRole('admin'), async (req, res) => {
   const { name, class: studentClass, school, dob, phone1, phone2, father_name, mother_name, address } = req.body;
   try {
     const result = await pool.query(
@@ -203,14 +233,15 @@ app.get('/batches/:batchId/students', requireAuth, requireRole('admin', 'coach')
 
 app.post('/attendance', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
   const { batch_id, date, records } = req.body;
+  const markedByCoachId = req.user.coach_id || null;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     await client.query('DELETE FROM attendance WHERE batch_id = $1 AND date = $2', [batch_id, date]);
     for (const record of records) {
       await client.query(
-        'INSERT INTO attendance (batch_id, student_id, date, status) VALUES ($1, $2, $3, $4)',
-        [batch_id, record.student_id, date, record.status]
+        'INSERT INTO attendance (batch_id, student_id, date, status, coach_id) VALUES ($1, $2, $3, $4, $5)',
+        [batch_id, record.student_id, date, record.status, markedByCoachId]
       );
     }
     await client.query('COMMIT');
@@ -223,31 +254,17 @@ app.post('/attendance', requireAuth, requireRole('admin', 'coach'), async (req, 
   }
 });
 
-app.get('/attendance', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
-  const { batch_id, date } = req.query;
-  try {
-    const result = await pool.query(
-      `SELECT attendance.student_id, students.name, attendance.status
-       FROM attendance
-       JOIN students ON attendance.student_id = students.id
-       WHERE attendance.batch_id = $1 AND attendance.date = $2`,
-      [batch_id, date]
-    );
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 app.get('/attendance/monthly', requireAuth, requireRole('admin', 'coach', 'student'), async (req, res) => {
   const { batch_id, month } = req.query;
   try {
     let query = `
-      SELECT attendance.student_id, students.name, attendance.date, attendance.status
-      FROM attendance
-      JOIN students ON attendance.student_id = students.id
-      WHERE attendance.batch_id = $1 AND attendance.date LIKE $2
-    `;
+  SELECT attendance.student_id, students.name, attendance.date, attendance.status,
+         coaches.name AS marked_by_coach
+  FROM attendance
+  JOIN students ON attendance.student_id = students.id
+  LEFT JOIN coaches ON attendance.coach_id = coaches.id
+  WHERE attendance.batch_id = $1 AND attendance.date LIKE $2
+`;
     const params = [batch_id, `${month}%`];
 
     if (req.user.role === 'student') {
@@ -294,7 +311,6 @@ app.get('/fees/status', requireAuth, requireRole('admin', 'coach', 'student'), a
     `;
     const params = [month, category];
 
-    // If a student is asking, only show their own record
     if (req.user.role === 'student') {
       query += ' WHERE students.id = $3';
       params.push(req.user.student_id);

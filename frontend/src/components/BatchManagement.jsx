@@ -14,6 +14,9 @@ function BatchManagement() {
   const [assignBatchId, setAssignBatchId] = useState('');
   const [assignStudentId, setAssignStudentId] = useState('');
   const [assignMessage, setAssignMessage] = useState('');
+  const [coachUsername, setCoachUsername] = useState('');
+  const [coachPassword, setCoachPassword] = useState('');
+  const [coachRole, setCoachRole] = useState('coach');
 
   useEffect(() => {
     loadCoaches();
@@ -43,28 +46,49 @@ function BatchManagement() {
   }
 
   async function handleAddCoach(e) {
-    e.preventDefault();
-    setCoachMessage('');
+  e.preventDefault();
+  setCoachMessage('');
 
-    try {
-      const response = await apiFetch('/coaches', {
-        method: 'POST',
-        body: JSON.stringify({ name: coachName, phone: coachPhone })
-      });
-      const data = await response.json();
+  try {
+    // Step 1: create the coach record
+    const coachResponse = await apiFetch('/coaches', {
+      method: 'POST',
+      body: JSON.stringify({ name: coachName, phone: coachPhone })
+    });
+    const coachData = await coachResponse.json();
 
-      if (response.ok) {
-        setCoachMessage(`Coach "${coachName}" added!`);
-        setCoachName('');
-        setCoachPhone('');
-        loadCoaches();
-      } else {
-        setCoachMessage(`Error: ${data.error}`);
-      }
-    } catch (err) {
-      setCoachMessage('Error: Could not connect to server');
+    if (!coachResponse.ok) {
+      setCoachMessage(`Error: ${coachData.error}`);
+      return;
     }
+
+   // Step 2: create their login, linked to the new coach's id
+const userResponse = await apiFetch('/auth/register', {
+  method: 'POST',
+  body: JSON.stringify({
+    username: coachUsername,
+    password: coachPassword,
+    role: coachRole,
+    coach_id: coachData.id
+  })
+});
+    const userData = await userResponse.json();
+
+    if (userResponse.ok) {
+      setCoachMessage(`Coach "${coachName}" added with login "${coachUsername}" (${coachRole})!`);
+      setCoachName('');
+      setCoachPhone('');
+      setCoachUsername('');
+      setCoachPassword('');
+      setCoachRole('coach');
+      loadCoaches();
+    } else {
+      setCoachMessage(`Coach saved, but login creation failed: ${userData.error}`);
+    }
+  } catch (err) {
+    setCoachMessage('Error: Could not connect to server');
   }
+}
 
   async function handleCreateBatch(e) {
     e.preventDefault();
@@ -119,21 +143,39 @@ function BatchManagement() {
 
       <h3>Add Coach</h3>
       <form onSubmit={handleAddCoach}>
-        <input
-          placeholder="Coach Name"
-          value={coachName}
-          onChange={(e) => setCoachName(e.target.value)}
-          required
-        />
-        <input
-          placeholder="Phone Number"
-          value={coachPhone}
-          onChange={(e) => setCoachPhone(e.target.value)}
-        />
-        <button type="submit">Add Coach</button>
-      </form>
-      {coachMessage && <p>{coachMessage}</p>}
+      <input
+    placeholder="Coach Name"
+    value={coachName}
+    onChange={(e) => setCoachName(e.target.value)}
+    required
+      />
+    <input
+    placeholder="Phone Number"
+    value={coachPhone}
+    onChange={(e) => setCoachPhone(e.target.value)}
+      />
 
+      <h4>Login Details</h4>
+      <input
+    placeholder="Username"
+    value={coachUsername}
+    onChange={(e) => setCoachUsername(e.target.value)}
+    required
+      />
+      <input
+    type="password"
+    placeholder="Password"
+    value={coachPassword}
+    onChange={(e) => setCoachPassword(e.target.value)}
+    required
+      />
+      <select value={coachRole} onChange={(e) => setCoachRole(e.target.value)}>
+      <option value="coach">Regular Coach</option>
+      <option value="admin">Admin Coach</option>
+      </select>
+
+      <button type="submit">Add Coach</button>
+      </form>
       <h4>Existing Coaches:</h4>
       <ul>
         {coaches.map((coach) => (
@@ -152,9 +194,8 @@ function BatchManagement() {
         <select
           value={selectedCoachId}
           onChange={(e) => setSelectedCoachId(e.target.value)}
-          required
-        >
-          <option value="">-- Select Coach --</option>
+>
+          <option value="">-- No Coach Yet --</option>
           {coaches.map((coach) => (
             <option key={coach.id} value={coach.id}>{coach.name}</option>
           ))}

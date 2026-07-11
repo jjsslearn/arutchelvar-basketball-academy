@@ -57,17 +57,24 @@ function AttendanceReport() {
       </div>
 
       {studentNames.length > 0 && (
-        <table className="attendance-table">
-          <thead>
-            <tr>
-              <th>Student</th>
-              {dates.map((d) => (
-                <th key={d}>{d.slice(8)}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {studentNames.map((name) => (
+  <table className="attendance-table">
+    <thead>
+      <tr>
+        <th>Student</th>
+        {dates.map((d) => (
+          <th key={d}>{d.slice(8)}</th>
+        ))}
+      </tr>
+      <tr>
+        <th>Marked by</th>
+        {dates.map((d) => {
+          const recordForDate = records.find((r) => r.date === d && r.marked_by_coach) || records.find((r) => r.date === d);
+          return <th key={d} className="marked-by-row">{recordForDate?.marked_by_coach || '-'}</th>;
+        })}
+      </tr>
+    </thead>
+    <tbody>
+      {studentNames.map((name) => (
               <tr key={name}>
                 <td>{name}</td>
                 {dates.map((d) => (

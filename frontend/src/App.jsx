@@ -53,9 +53,9 @@ function App() {
 
       {view === 'dashboard' && (
         <div className="dashboard-grid">
-          {(user.role === 'admin' || user.role === 'coach' || user.role === 'student') && (
-            <button onClick={() => setView('studentForm')}>Student Registration</button>
-          )}
+          {user.role === 'admin' && (
+  <button onClick={() => setView('studentForm')}>Student Registration</button>
+)}
           {(user.role === 'admin' || user.role === 'coach') && (
             <button onClick={() => setView('attendance')}>Attendance</button>
           )}

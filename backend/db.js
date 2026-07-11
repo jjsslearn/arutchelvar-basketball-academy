@@ -77,8 +77,31 @@ async function initTables() {
     created_at TIMESTAMP DEFAULT NOW()
   )
 `);
-
-  console.log('All tables ready.');
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL,
+    student_id INTEGER REFERENCES students(id),
+    coach_id INTEGER REFERENCES coaches(id),
+    created_at TIMESTAMP DEFAULT NOW()
+  )
+`);
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS attendance (
+    id SERIAL PRIMARY KEY,
+    batch_id INTEGER NOT NULL REFERENCES batches(id),
+    student_id INTEGER NOT NULL REFERENCES students(id),
+    date TEXT NOT NULL,
+    status TEXT NOT NULL,
+    coach_id INTEGER REFERENCES coaches(id)
+  )
+`);
+// Add new columns if they don't already exist (for databases created before this update)
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS coach_id INTEGER REFERENCES coaches(id)`);
+await pool.query(`ALTER TABLE attendance ADD COLUMN IF NOT EXISTS coach_id INTEGER REFERENCES coaches(id)`);
+console.log('All tables ready.');
 }
 
 initTables().catch((err) => console.error('Error creating tables:', err));

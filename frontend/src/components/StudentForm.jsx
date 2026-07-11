@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import apiFetch from '../api';
+
 function StudentForm() {
   const [formData, setFormData] = useState({
     name: '',
@@ -13,6 +14,8 @@ function StudentForm() {
     address: ''
   });
 
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
 
   function calculateAge(dob) {
@@ -36,23 +39,43 @@ function StudentForm() {
     setMessage('');
 
     try {
-      const response = await apiFetch('/students', {
-  method: 'POST',
-  body: JSON.stringify(formData)
-});
-      const data = await response.json();
+      // Step 1: create the student record
+      const studentResponse = await apiFetch('/students', {
+        method: 'POST',
+        body: JSON.stringify(formData)
+      });
+      const studentData = await studentResponse.json();
 
-      if (response.ok) {
-        setMessage(`Success! ${formData.name} registered (Age: ${calculateAge(formData.dob)})`);
+      if (!studentResponse.ok) {
+        setMessage(`Error: ${studentData.error}`);
+        return;
+      }
+
+      // Step 2: create their login, linked to the new student's id
+      const userResponse = await apiFetch('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({
+          username,
+          password,
+          role: 'student',
+          student_id: studentData.id
+        })
+      });
+      const userData = await userResponse.json();
+
+      if (userResponse.ok) {
+        setMessage(`Success! ${formData.name} registered (Age: ${calculateAge(formData.dob)}) with login "${username}"`);
         setFormData({
           name: '', class: '', school: '', dob: '',
           phone1: '', phone2: '', father_name: '', mother_name: '', address: ''
         });
+        setUsername('');
+        setPassword('');
       } else {
-        setMessage(`Error: ${data.error}`);
+        setMessage(`Student saved, but login creation failed: ${userData.error}`);
       }
     } catch (err) {
-      setMessage(`Error: Could not connect to server`);
+      setMessage('Error: Could not connect to server');
     }
   }
 
@@ -75,6 +98,10 @@ function StudentForm() {
         <input name="father_name" placeholder="Father's Name" value={formData.father_name} onChange={handleChange} />
         <input name="mother_name" placeholder="Mother's Name" value={formData.mother_name} onChange={handleChange} />
         <input name="address" placeholder="Address" value={formData.address} onChange={handleChange} />
+
+        <h3>Login Details</h3>
+        <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} required />
+        <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
 
         <button type="submit">Submit</button>
       </form>
