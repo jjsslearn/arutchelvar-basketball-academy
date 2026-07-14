@@ -5,12 +5,16 @@ function AttendanceReport() {
   const [selectedBatch, setSelectedBatch] = useState('');
   const [month, setMonth] = useState('');
   const [records, setRecords] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [stats, setStats] = useState([]);
 
   useEffect(() => {
     apiFetch('/batches').then(r => r.json()).then(setBatches);
   }, []);
 
-  useEffect(() => {
+  
+useEffect(() => {
     if (selectedBatch && month) {
       apiFetch(`/attendance/monthly?batch_id=${selectedBatch}&month=${month}`)
         .then((res) => res.json())
@@ -18,7 +22,20 @@ function AttendanceReport() {
         .catch((err) => console.error(err));
     }
   }, [selectedBatch, month]);
-
+useEffect(() => {
+  apiFetch('/students')
+    .then((res) => res.json())
+    .then((data) => {
+      if (Array.isArray(data)) setStudents(data);
+    })
+    .catch(() => {});
+}, []);
+function loadStats(studentId) {
+  apiFetch(`/attendance/stats/${studentId}`)
+    .then((res) => res.json())
+    .then((data) => setStats(data))
+    .catch((err) => console.error('Error loading stats:', err));
+}
   // Build a unique list of student names and dates from the raw records
   const studentNames = [...new Set(records.map((r) => r.name))];
   const dates = [...new Set(records.map((r) => r.date))].sort();
@@ -55,6 +72,31 @@ function AttendanceReport() {
 
         <button type="button" onClick={handlePrint}>Print Report</button>
       </div>
+      <div className="no-print">
+  <h3>Attendance Stats</h3>
+  <select
+    value={selectedStudentId}
+    onChange={(e) => {
+      setSelectedStudentId(e.target.value);
+      if (e.target.value) loadStats(e.target.value);
+    }}
+  >
+    <option value="">-- Select Student for Stats --</option>
+    {students.map((s) => (
+      <option key={s.id} value={s.id}>{s.name}</option>
+    ))}
+  </select>
+
+  {stats.length > 0 && (
+    <ul>
+      {stats.map((s) => (
+        <li key={s.batch_id}>
+          {s.batch_name}: {s.classes_attended} / {s.total_classes} classes attended
+        </li>
+      ))}
+    </ul>
+  )}
+</div>
 
       {studentNames.length > 0 && (
   <table className="attendance-table">

@@ -98,6 +98,32 @@ await pool.query(`
     coach_id INTEGER REFERENCES coaches(id)
   )
 `);
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS login_log (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    username TEXT NOT NULL,
+    role TEXT NOT NULL,
+    login_time TIMESTAMP DEFAULT NOW()
+  )
+`);
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS teams (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    coach_id INTEGER REFERENCES coaches(id),
+    created_at TIMESTAMP DEFAULT NOW()
+  )
+`);
+
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS team_members (
+    id SERIAL PRIMARY KEY,
+    team_id INTEGER NOT NULL REFERENCES teams(id),
+    student_id INTEGER NOT NULL REFERENCES students(id),
+    jersey_number TEXT
+  )
+`);
 // Add new columns if they don't already exist (for databases created before this update)
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS coach_id INTEGER REFERENCES coaches(id)`);
 await pool.query(`ALTER TABLE attendance ADD COLUMN IF NOT EXISTS coach_id INTEGER REFERENCES coaches(id)`);

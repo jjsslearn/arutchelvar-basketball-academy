@@ -4,9 +4,12 @@ import Login from './components/Login';
 import StudentForm from './components/StudentForm';
 import AttendanceForm from './components/AttendanceForm';
 import BatchManagement from './components/BatchManagement';
+import CoachManagement from './components/CoachManagement';
 import FeesForm from './components/FeesForm';
 import PrintCards from './components/PrintCards';
 import AttendanceReport from './components/AttendanceReport';
+import LoginLog from './components/LoginLog';
+import TeamSelection from './components/TeamSelection';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -55,12 +58,15 @@ function App() {
         <div className="dashboard-grid">
           {user.role === 'admin' && (
   <button onClick={() => setView('studentForm')}>Student Registration</button>
-)}
+          )}
           {(user.role === 'admin' || user.role === 'coach') && (
             <button onClick={() => setView('attendance')}>Attendance</button>
           )}
           {(user.role === 'admin') && (
-            <button onClick={() => setView('batchManagement')}>Coach & Batch Management</button>
+            <button onClick={() => setView('coachManagement')}>Coach Management</button>
+          )}
+          {(user.role === 'admin' || user.role === 'coach') && (
+            <button onClick={() => setView('batchManagement')}>Batch Management</button>
           )}
           {(user.role === 'admin' || user.role === 'coach' || user.role === 'student') && (
             <button onClick={() => setView('fees')}>Fees</button>
@@ -71,15 +77,24 @@ function App() {
           {(user.role === 'admin' || user.role === 'coach' || user.role === 'student') && (
             <button onClick={() => setView('attendanceReport')}>Attendance Report</button>
           )}
+          {(user.role === 'admin') && (
+            <button onClick={() => setView('loginLog')}>Coach Login Log</button>
+          )}
+          {(user.role === 'admin') && (
+            <button onClick={() => setView('teamSelection')}>Select Team</button>
+          )}
         </div>
       )}
 
       {view === 'studentForm' && <StudentForm />}
       {view === 'attendance' && <AttendanceForm />}
       {view === 'batchManagement' && <BatchManagement />}
+      {view === 'coachManagement' && <CoachManagement />}
       {view === 'fees' && <FeesForm user={user} />}
       {view === 'printCards' && <PrintCards />}
       {view === 'attendanceReport' && <AttendanceReport user={user} />}
+      {view === 'loginLog' && <LoginLog />}
+      {view === 'teamSelection' && <TeamSelection />}
     </div>
   );
 }

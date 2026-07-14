@@ -238,3 +238,60 @@ p {
   color: #666;
   background-color: #f8f8f8;
 }
+.student-list {
+  list-style: none;
+  padding: 0;
+}
+
+.student-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.student-list button {
+  margin-left: 8px;
+  padding: 4px 10px;
+}
+.tournament-line {
+  margin: 4px 0;
+  font-size: 15px;
+}
+
+.players-list-title {
+  text-align: center;
+  margin: 16px 0 8px 0;
+  text-decoration: underline;
+}
+
+.players-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.players-table th, .players-table td {
+  border: 1px solid #333;
+  padding: 6px 10px;
+  text-align: center;
+}
+
+.players-table th {
+  background-color: #f0f0f0;
+}
+
+.print-footer {
+  margin-top: 20px;
+}
+
+.print-footer p {
+  margin: 6px 0;
+}
+
+.secretary-line {
+  text-align: right;
+  margin-top: 40px;
+  font-weight: bold;
+}

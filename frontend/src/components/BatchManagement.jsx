@@ -3,9 +3,6 @@ import apiFetch from '../api';
 
 function BatchManagement() {
   const [coaches, setCoaches] = useState([]);
-  const [coachName, setCoachName] = useState('');
-  const [coachPhone, setCoachPhone] = useState('');
-  const [coachMessage, setCoachMessage] = useState('');
   const [batches, setBatches] = useState([]);
   const [batchName, setBatchName] = useState('');
   const [selectedCoachId, setSelectedCoachId] = useState('');
@@ -14,15 +11,22 @@ function BatchManagement() {
   const [assignBatchId, setAssignBatchId] = useState('');
   const [assignStudentId, setAssignStudentId] = useState('');
   const [assignMessage, setAssignMessage] = useState('');
-  const [coachUsername, setCoachUsername] = useState('');
-  const [coachPassword, setCoachPassword] = useState('');
-  const [coachRole, setCoachRole] = useState('coach');
+  const [viewBatchId, setViewBatchId] = useState('');
+  const [batchStudents, setBatchStudents] = useState([]);
 
   useEffect(() => {
     loadCoaches();
     loadBatches();
     loadAllStudents();
   }, []);
+
+  useEffect(() => {
+    if (viewBatchId) {
+      loadBatchStudents(viewBatchId);
+    } else {
+      setBatchStudents([]);
+    }
+  }, [viewBatchId]);
 
   function loadCoaches() {
     apiFetch('/coaches')
@@ -45,50 +49,12 @@ function BatchManagement() {
       .catch((err) => console.error('Error loading students:', err));
   }
 
-  async function handleAddCoach(e) {
-  e.preventDefault();
-  setCoachMessage('');
-
-  try {
-    // Step 1: create the coach record
-    const coachResponse = await apiFetch('/coaches', {
-      method: 'POST',
-      body: JSON.stringify({ name: coachName, phone: coachPhone })
-    });
-    const coachData = await coachResponse.json();
-
-    if (!coachResponse.ok) {
-      setCoachMessage(`Error: ${coachData.error}`);
-      return;
-    }
-
-   // Step 2: create their login, linked to the new coach's id
-const userResponse = await apiFetch('/auth/register', {
-  method: 'POST',
-  body: JSON.stringify({
-    username: coachUsername,
-    password: coachPassword,
-    role: coachRole,
-    coach_id: coachData.id
-  })
-});
-    const userData = await userResponse.json();
-
-    if (userResponse.ok) {
-      setCoachMessage(`Coach "${coachName}" added with login "${coachUsername}" (${coachRole})!`);
-      setCoachName('');
-      setCoachPhone('');
-      setCoachUsername('');
-      setCoachPassword('');
-      setCoachRole('coach');
-      loadCoaches();
-    } else {
-      setCoachMessage(`Coach saved, but login creation failed: ${userData.error}`);
-    }
-  } catch (err) {
-    setCoachMessage('Error: Could not connect to server');
+  function loadBatchStudents(batchId) {
+    apiFetch(`/batches/${batchId}/students`)
+      .then((res) => res.json())
+      .then((data) => setBatchStudents(data))
+      .catch((err) => console.error('Error loading batch students:', err));
   }
-}
 
   async function handleCreateBatch(e) {
     e.preventDefault();
@@ -127,8 +93,10 @@ const userResponse = await apiFetch('/auth/register', {
 
       if (response.ok) {
         setAssignMessage('Student assigned to batch!');
-        setAssignBatchId('');
         setAssignStudentId('');
+        if (assignBatchId === viewBatchId) {
+          loadBatchStudents(viewBatchId);
+        }
       } else {
         setAssignMessage(`Error: ${data.error}`);
       }
@@ -137,64 +105,47 @@ const userResponse = await apiFetch('/auth/register', {
     }
   }
 
+  async function handleRemoveStudent(batchId, studentId, studentName) {
+    if (!window.confirm(`Remove ${studentName} from this batch?`)) return;
+    try {
+      const response = await apiFetch(`/batches/${batchId}/students/${studentId}`, {
+        method: 'DELETE'
+      });
+      const data = await response.json();
+      if (response.ok) {
+        loadBatchStudents(batchId);
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (err) {
+      alert('Error: Could not connect to server');
+    }
+  }
+  async function handleDeleteBatch(id, name) {
+  if (!window.confirm(`Delete batch "${name}"? This removes all its attendance records too.`)) return;
+  try {
+    const response = await apiFetch(`/batches/${id}`, { method: 'DELETE' });
+    const data = await response.json();
+    if (response.ok) {
+      setBatchMessage(`Batch "${name}" deleted`);
+      loadBatches();
+      if (viewBatchId === id) setViewBatchId('');
+    } else {
+      setBatchMessage(`Error: ${data.error}`);
+    }
+  } catch (err) {
+    setBatchMessage('Error: Could not connect to server');
+  }
+}
+
   return (
     <div>
       <h2>Batch Management</h2>
 
-      <h3>Add Coach</h3>
-      <form onSubmit={handleAddCoach}>
-      <input
-    placeholder="Coach Name"
-    value={coachName}
-    onChange={(e) => setCoachName(e.target.value)}
-    required
-      />
-    <input
-    placeholder="Phone Number"
-    value={coachPhone}
-    onChange={(e) => setCoachPhone(e.target.value)}
-      />
-
-      <h4>Login Details</h4>
-      <input
-    placeholder="Username"
-    value={coachUsername}
-    onChange={(e) => setCoachUsername(e.target.value)}
-    required
-      />
-      <input
-    type="password"
-    placeholder="Password"
-    value={coachPassword}
-    onChange={(e) => setCoachPassword(e.target.value)}
-    required
-      />
-      <select value={coachRole} onChange={(e) => setCoachRole(e.target.value)}>
-      <option value="coach">Regular Coach</option>
-      <option value="admin">Admin Coach</option>
-      </select>
-
-      <button type="submit">Add Coach</button>
-      </form>
-      <h4>Existing Coaches:</h4>
-      <ul>
-        {coaches.map((coach) => (
-          <li key={coach.id}>{coach.name} — {coach.phone}</li>
-        ))}
-      </ul>
-
       <h3>Create Batch</h3>
       <form onSubmit={handleCreateBatch}>
-        <input
-          placeholder="Batch Name"
-          value={batchName}
-          onChange={(e) => setBatchName(e.target.value)}
-          required
-        />
-        <select
-          value={selectedCoachId}
-          onChange={(e) => setSelectedCoachId(e.target.value)}
->
+        <input placeholder="Batch Name" value={batchName} onChange={(e) => setBatchName(e.target.value)} required />
+        <select value={selectedCoachId} onChange={(e) => setSelectedCoachId(e.target.value)}>
           <option value="">-- No Coach Yet --</option>
           {coaches.map((coach) => (
             <option key={coach.id} value={coach.id}>{coach.name}</option>
@@ -205,39 +156,51 @@ const userResponse = await apiFetch('/auth/register', {
       {batchMessage && <p>{batchMessage}</p>}
 
       <h4>Existing Batches:</h4>
-      <ul>
-        {batches.map((batch) => (
-          <li key={batch.id}>{batch.name} — Coach: {batch.coach_name}</li>
-        ))}
-      </ul>
+<ul className="student-list">
+  {batches.map((batch) => (
+    <li key={batch.id}>
+      <span>{batch.name} — Coach: {batch.coach_name || 'Unassigned'}</span>
+      <button type="button" onClick={() => handleDeleteBatch(batch.id, batch.name)}>Delete</button>
+    </li>
+  ))}
+</ul>
 
       <h3>Assign Student to Batch</h3>
       <form onSubmit={handleAssignStudent}>
-        <select
-          value={assignBatchId}
-          onChange={(e) => setAssignBatchId(e.target.value)}
-          required
-        >
+        <select value={assignBatchId} onChange={(e) => setAssignBatchId(e.target.value)} required>
           <option value="">-- Select Batch --</option>
           {batches.map((batch) => (
             <option key={batch.id} value={batch.id}>{batch.name}</option>
           ))}
         </select>
-
-        <select
-          value={assignStudentId}
-          onChange={(e) => setAssignStudentId(e.target.value)}
-          required
-        >
+        <select value={assignStudentId} onChange={(e) => setAssignStudentId(e.target.value)} required>
           <option value="">-- Select Student --</option>
           {allStudents.map((student) => (
             <option key={student.id} value={student.id}>{student.name}</option>
           ))}
         </select>
-
         <button type="submit">Assign Student</button>
       </form>
       {assignMessage && <p>{assignMessage}</p>}
+
+      <h3>View / Remove Batch Members</h3>
+      <select value={viewBatchId} onChange={(e) => setViewBatchId(e.target.value)}>
+        <option value="">-- Select Batch to View --</option>
+        {batches.map((batch) => (
+          <option key={batch.id} value={batch.id}>{batch.name}</option>
+        ))}
+      </select>
+
+      {viewBatchId && (
+        <ul className="student-list">
+          {batchStudents.map((s) => (
+            <li key={s.id}>
+              <span>{s.name} ({s.class})</span>
+              <button type="button" onClick={() => handleRemoveStudent(viewBatchId, s.id, s.name)}>Remove</button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
