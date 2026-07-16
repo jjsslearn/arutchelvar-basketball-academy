@@ -3,9 +3,10 @@ import apiFetch from '../api';
 
 function SelfRegistration({ onComplete }) {
   const [formData, setFormData] = useState({
-    name: '', class: '', school: '', dob: '',
-    phone1: '', phone2: '', father_name: '', mother_name: '', address: ''
-  });
+  name: '', class: '', school: '', dob: '',
+  phone1: '', phone2: '', father_name: '', mother_name: '', address: '',
+  email: '', aadhaar_no: ''
+});
   const [message, setMessage] = useState('');
 
   function handleChange(e) {
@@ -55,6 +56,8 @@ function SelfRegistration({ onComplete }) {
         <input name="father_name" placeholder="Father's Name" value={formData.father_name} onChange={handleChange} />
         <input name="mother_name" placeholder="Mother's Name" value={formData.mother_name} onChange={handleChange} />
         <input name="address" placeholder="Address" value={formData.address} onChange={handleChange} />
+        <input name="email" type="email" placeholder="Email" value={formData.email} onChange={handleChange} />
+        <input name="aadhaar_no" placeholder="Aadhaar Number" value={formData.aadhaar_no} onChange={handleChange} />
 
         <button type="submit">Submit Registration</button>
       </form>
