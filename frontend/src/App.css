@@ -352,9 +352,48 @@ p {
   margin: 2px 0;
 }
 @media print {
+  .App {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* keep your existing rules below this */
   @page {
     size: A4;
-    margin: 5mm;
+    margin: 10mm;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  .print-area {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    font-size: 12pt;
+  }
+
+  .doc-club-name {
+    font-size: 18pt;
+  }
+
+  .players-table {
+    font-size: 11pt;
+    width: 100%;
+  }
+}
+@media print {
+  .App {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  @page {
+    size: A4;
+    margin: 15mm;
   }
   .no-print {
     display: none !important;
@@ -378,7 +417,7 @@ p {
   }
 
   .doc-club-name {
-    font-size: 18pt;
+    font-size: 24pt;
   }
 
   .players-table {

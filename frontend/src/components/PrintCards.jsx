@@ -128,12 +128,12 @@ function PrintCards() {
 
     <div className="doc-officials">
       <div className="doc-official-left">
-        <p>President</p>
+        <p><strong>President</strong></p>
         <p>{identity.presidentName}</p>
         <p>{identity.presidentPhone}</p>
       </div>
       <div className="doc-official-right">
-  <p>Secretary</p>
+  <p><strong>Secretary</strong></p>
   <p>{identity.secretaryName}</p>
   <p>{identity.secretaryPhone}</p>
 </div>
