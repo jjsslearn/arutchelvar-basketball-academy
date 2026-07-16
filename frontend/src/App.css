@@ -349,8 +349,11 @@ p {
 .doc-officials p {
   margin: 2px 0;
 }
-
 @media print {
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
   .no-print {
     display: none !important;
   }
@@ -359,7 +362,28 @@ p {
     height: 80px !important;
     object-fit: contain !important;
   }
+
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  .print-area {
+    width: 100%;
+    max-width: 210mm;
+    margin: 0 auto;
+    font-size: 12pt;
+  }
+
+  .doc-club-name {
+    font-size: 18pt;
+  }
+
+  .players-table {
+    font-size: 11pt;
+  }
 }
+
 .doc-divider {
   border: none;
   border-top: 2px solid #333;
