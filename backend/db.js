@@ -127,6 +127,8 @@ await pool.query(`
 // Add new columns if they don't already exist (for databases created before this update)
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS coach_id INTEGER REFERENCES coaches(id)`);
 await pool.query(`ALTER TABLE attendance ADD COLUMN IF NOT EXISTS coach_id INTEGER REFERENCES coaches(id)`);
+await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS email TEXT`);
+await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS aadhaar_no TEXT`);
 console.log('All tables ready.');
 }
 

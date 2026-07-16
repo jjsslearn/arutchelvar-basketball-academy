@@ -164,12 +164,12 @@ app.get('/students', requireAuth, requireRole('admin', 'coach'), async (req, res
 // Update a student's details
 app.put('/students/:id', requireAuth, requireRole('admin'), async (req, res) => {
   const { id } = req.params;
-  const { name, class: studentClass, school, dob, phone1, phone2, father_name, mother_name, address } = req.body;
+  const { name, class: studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no } = req.body;
   try {
     await pool.query(
       `UPDATE students SET name = $1, class = $2, school = $3, dob = $4, phone1 = $5,
-       phone2 = $6, father_name = $7, mother_name = $8, address = $9 WHERE id = $10`,
-      [name, studentClass, school, dob, phone1, phone2, father_name, mother_name, address, id]
+       phone2 = $6, father_name = $7, mother_name = $8, address = $9, email = $10, aadhaar_no = $11 WHERE id = $12`,
+      [name, studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no, id]
     );
     res.json({ message: 'Student updated successfully' });
   } catch (err) {
@@ -185,6 +185,7 @@ app.delete('/students/:id', requireAuth, requireRole('admin'), async (req, res) 
     await pool.query('DELETE FROM batch_students WHERE student_id = $1', [id]);
     await pool.query('DELETE FROM attendance WHERE student_id = $1', [id]);
     await pool.query('DELETE FROM fee_payments WHERE student_id = $1', [id]);
+    await pool.query('DELETE FROM team_members WHERE student_id = $1', [id]);
     await pool.query('DELETE FROM users WHERE student_id = $1', [id]);
     await pool.query('DELETE FROM students WHERE id = $1', [id]);
     res.json({ message: 'Student deleted successfully' });
@@ -198,7 +199,7 @@ app.post('/students/self', requireAuth, requireRole('student'), async (req, res)
     return res.status(400).json({ error: 'Your registration is already complete' });
   }
 
-  const { name, class: studentClass, school, dob, phone1, phone2, father_name, mother_name, address } = req.body;
+  const { name, class: studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no } = req.body;
 
   try {
     // Duplicate check, same rule as admin registration
@@ -211,10 +212,10 @@ app.post('/students/self', requireAuth, requireRole('student'), async (req, res)
     }
 
     const studentResult = await pool.query(
-      `INSERT INTO students (name, class, school, dob, phone1, phone2, father_name, mother_name, address)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-      [name, studentClass, school, dob, phone1, phone2, father_name, mother_name, address]
-    );
+  `INSERT INTO students (name, class, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no)
+   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+  [name, studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no]
+);
 
     // Link this new student record to the logged-in user's own account
     await pool.query('UPDATE users SET student_id = $1 WHERE id = $2', [studentResult.rows[0].id, req.user.id]);
