@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import './App.css';
 import Login from './components/Login';
 import StudentForm from './components/StudentForm';
+import SelfRegistration from './components/SelfRegistration';
 import AttendanceForm from './components/AttendanceForm';
 import BatchManagement from './components/BatchManagement';
 import CoachManagement from './components/CoachManagement';
@@ -38,8 +39,8 @@ function App() {
   if (!user) {
     return <Login onLogin={handleLogin} />;
   }
-
-  // Logged in: show dashboard or the selected module
+  // Student logged in but hasn't completed their own registration yet
+if (user.role === 'student' && !user.student_id) {
   return (
     <div className="App">
       <div className="top-bar">
@@ -49,9 +50,24 @@ function App() {
           <button onClick={handleLogout}>Logout</button>
         </div>
       </div>
+      <SelfRegistration onComplete={() => {}} />
+    </div>
+  );
+}
+
+  // Logged in: show dashboard or the selected module
+  return (
+    <div className="App">
+        <div className="top-bar no-print">
+        <h1>Arutchelvar Basketball Academy</h1>
+        <div>
+          <span>Logged in as: {user.username} ({user.role})</span>
+          <button onClick={handleLogout}>Logout</button>
+        </div>
+      </div>
 
       {view !== 'dashboard' && (
-        <button className="back-btn" onClick={() => setView('dashboard')}>← Back to Dashboard</button>
+        <button className="back-btn no-print" onClick={() => setView('dashboard')}>← Back to Dashboard</button>
       )}
 
       {view === 'dashboard' && (

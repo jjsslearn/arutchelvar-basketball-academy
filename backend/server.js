@@ -192,6 +192,38 @@ app.delete('/students/:id', requireAuth, requireRole('admin'), async (req, res) 
     res.status(500).json({ error: err.message });
   }
 });
+// A student fills in their own profile for the first time
+app.post('/students/self', requireAuth, requireRole('student'), async (req, res) => {
+  if (req.user.student_id) {
+    return res.status(400).json({ error: 'Your registration is already complete' });
+  }
+
+  const { name, class: studentClass, school, dob, phone1, phone2, father_name, mother_name, address } = req.body;
+
+  try {
+    // Duplicate check, same rule as admin registration
+    const existing = await pool.query(
+      'SELECT id FROM students WHERE name = $1 AND phone1 = $2',
+      [name, phone1]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'A student with this name and phone number is already registered' });
+    }
+
+    const studentResult = await pool.query(
+      `INSERT INTO students (name, class, school, dob, phone1, phone2, father_name, mother_name, address)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+      [name, studentClass, school, dob, phone1, phone2, father_name, mother_name, address]
+    );
+
+    // Link this new student record to the logged-in user's own account
+    await pool.query('UPDATE users SET student_id = $1 WHERE id = $2', [studentResult.rows[0].id, req.user.id]);
+
+    res.status(201).json({ id: studentResult.rows[0].id, message: 'Registration completed successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ----- COACHES -----
 

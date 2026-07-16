@@ -142,11 +142,6 @@ p {
   margin-bottom: 20px;
 }
 
-@media print {
-  .no-print {
-    display: none;
-  }
-}
 .club-logo {
   width: 100px;
   height: 100px;
@@ -284,14 +279,89 @@ p {
 
 .print-footer {
   margin-top: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
 }
-
 .print-footer p {
   margin: 6px 0;
+}
+
+.footer-coach-block {
+  text-align: left;
+}
+
+.footer-secretary-block {
+  text-align: center;
+  font-weight: bold;
+  margin-top: 80px;
 }
 
 .secretary-line {
   text-align: right;
   margin-top: 40px;
   font-weight: bold;
+}
+.edit-block {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+}
+
+.edit-block input {
+  flex: 1 1 150px;
+}
+.doc-header {
+  text-align: center;
+  margin-bottom: 16px;
+  margin-top: 0;
+}
+
+.doc-logo {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+  margin-bottom: 6px;
+}
+
+.doc-club-name {
+  font-size: 1.6rem;
+  margin: 4px 0 12px 0;
+}
+
+.doc-officials {
+  display: flex;
+  justify-content: space-between;
+  text-align: left;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.doc-official-left {
+  text-align: left;
+}
+
+.doc-official-right {
+  text-align: right;
+}
+
+.doc-officials p {
+  margin: 2px 0;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .doc-logo {
+    width: 80px !important;
+    height: 80px !important;
+    object-fit: contain !important;
+  }
+}
+.doc-divider {
+  border: none;
+  border-top: 2px solid #333;
+  margin: 12px 0;
 }

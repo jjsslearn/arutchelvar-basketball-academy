@@ -1,42 +1,57 @@
 import { useState, useEffect } from 'react';
 import apiFetch from '../api';
-import logo from '../assets/logo.jpg';
+import arutchelvarLogo from '../assets/logo.jpg';
+import youngbloodLogo from '../assets/youngblood-logo.jpg';
+
+const CLUB_IDENTITIES = {
+  arutchelvar: {
+    logo: arutchelvarLogo,
+    name: 'PassionPollachi Basketball Academy',
+    presidentName: 'A.Rajasekar',
+    presidentPhone: '9865166001',
+    secretaryName: 'S.Krishnakumar',
+    secretaryPhone: '9443758242'
+  },
+  youngblood: {
+    logo: youngbloodLogo,
+    name: 'Youngblood Basketball Academy, Pollachi',
+    presidentName: 'A.Senthil Kumar',
+    presidentPhone: '9865677220',
+    secretaryName: 'P. Santhosh Robinson',
+    secretaryPhone: '7502483018'
+  }
+};
 
 function PrintCards() {
-  const [students, setStudents] = useState([]);
   const [coaches, setCoaches] = useState([]);
   const [teams, setTeams] = useState([]);
   const [selectedTeamId, setSelectedTeamId] = useState('');
-  const [selectedIds, setSelectedIds] = useState([]);
+  const [selectedStudents, setSelectedStudents] = useState([]);
   const [jerseyNumbers, setJerseyNumbers] = useState({});
   const [selectedCoach, setSelectedCoach] = useState('');
+  const [selectedAsstCoach, setSelectedAsstCoach] = useState('');
   const [tournamentName, setTournamentName] = useState('');
   const [category, setCategory] = useState('');
-  const [selectedAsstCoach, setSelectedAsstCoach] = useState('');
+  const [identityKey, setIdentityKey] = useState('arutchelvar');
+
+  const identity = CLUB_IDENTITIES[identityKey];
 
   useEffect(() => {
-    apiFetch('/students').then(r => r.json()).then(setStudents);
     apiFetch('/coaches').then(r => r.json()).then(setCoaches);
     apiFetch('/teams').then(r => r.json()).then(setTeams);
   }, []);
 
-  function toggleSelect(id) {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  }
-
   async function handleSelectTeam(teamId) {
     setSelectedTeamId(teamId);
     if (!teamId) {
-      setSelectedIds([]);
+      setSelectedStudents([]);
       setJerseyNumbers({});
       return;
     }
     const response = await apiFetch(`/teams/${teamId}`);
     const team = await response.json();
 
-    setSelectedIds(team.members.map((m) => m.id));
+    setSelectedStudents(team.members);
     const jerseys = {};
     team.members.forEach((m) => {
       jerseys[m.id] = m.jersey_number || '';
@@ -52,62 +67,37 @@ function PrintCards() {
     window.print();
   }
 
-  const selectedStudents = students.filter((s) => selectedIds.includes(s.id));
-
   return (
     <div>
-      <h2>Print Player Cards</h2>
+      <h2 className="no-print">Print Player Cards</h2>
 
       <div className="no-print">
         <label>
-          Load Saved Team:
+          Club Identity:
+          <select value={identityKey} onChange={(e) => setIdentityKey(e.target.value)}>
+            <option value="arutchelvar">PassionPollachi Basketball Academy</option>
+            <option value="youngblood">Youngblood Basketball Academy</option>
+          </select>
+        </label>
+
+        <label>
+          Select Team:
           <select value={selectedTeamId} onChange={(e) => handleSelectTeam(e.target.value)}>
-            <option value="">-- Manual Selection --</option>
+            <option value="">-- Select a Saved Team --</option>
             {teams.map((t) => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
           </select>
         </label>
-        <label>
-        Tournament Name:
-        <input value={tournamentName} onChange={(e) => setTournamentName(e.target.value)} placeholder="e.g. 70th Venkatakrishnan Trophy" />
-        </label>
-        <label>
-        Category:
-        <input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. U-13 (2014 & above)" />
-        </label>
-        <label>
-        Assistant Coach:
-        <select value={selectedAsstCoach} onChange={(e) => setSelectedAsstCoach(e.target.value)}>
-        <option value="">-- Select Asst. Coach --</option>
-        {coaches.map((c) => (
-        <option key={c.id} value={c.name}>{c.name}</option>
-        ))}
-      </select>
-      </label>
 
-        <h4>Select Players:</h4>
-        {students.map((s) => (
-          <div key={s.id}>
-            <label>
-              <input
-                type="checkbox"
-                checked={selectedIds.includes(s.id)}
-                onChange={() => toggleSelect(s.id)}
-              />
-              {s.name}
-            </label>
-            {selectedIds.includes(s.id) && (
-              <input
-                placeholder="Jersey #"
-                value={jerseyNumbers[s.id] || ''}
-                onChange={(e) =>
-                  setJerseyNumbers((prev) => ({ ...prev, [s.id]: e.target.value }))
-                }
-              />
-            )}
-          </div>
-        ))}
+        <label>
+          Tournament Name:
+          <input value={tournamentName} onChange={(e) => setTournamentName(e.target.value)} placeholder="e.g. 70th Venkatakrishnan Trophy" />
+        </label>
+        <label>
+          Category:
+          <input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. U-13 (2014 & above)" />
+        </label>
 
         <label>
           Coach:
@@ -118,50 +108,81 @@ function PrintCards() {
             ))}
           </select>
         </label>
+        <label>
+          Assistant Coach:
+          <select value={selectedAsstCoach} onChange={(e) => setSelectedAsstCoach(e.target.value)}>
+            <option value="">-- Select Asst. Coach --</option>
+            {coaches.map((c) => (
+              <option key={c.id} value={c.name}>{c.name}</option>
+            ))}
+          </select>
+        </label>
 
-        <button type="button" onClick={handlePrint}>Print Cards</button>
+        <button type="button" onClick={handlePrint} disabled={!selectedTeamId}>Print Cards</button>
       </div>
 
       <div className="print-area">
-  <div className="club-header">
-    <img src={logo} alt="Club Logo" className="club-logo" />
-    <h1>Arutchelvar Basketball Academy</h1>
-    <p>President: A.Rajasekar (9865166001) &nbsp; | &nbsp; Secretary: S.Krishnakumar (9443758242)</p>
-  </div>
+  <div className="doc-header">
+    <img src={identity.logo} alt="Club Logo" className="doc-logo" />
+    <h1 className="doc-club-name">{identity.name}</h1>
 
-  {tournamentName && <p className="tournament-line"><strong>Tournament Name:</strong> {tournamentName}</p>}
-  {category && <p className="tournament-line"><strong>Category:</strong> {category}</p>}
+    <div className="doc-officials">
+      <div className="doc-official-left">
+        <p>President</p>
+        <p>{identity.presidentName}</p>
+        <p>{identity.presidentPhone}</p>
+      </div>
+      <div className="doc-official-right">
+  <p>Secretary</p>
+  <p>{identity.secretaryName}</p>
+  <p>{identity.secretaryPhone}</p>
+</div>
+</div>
+<hr className="doc-divider" />
+</div>
 
-  <h3 className="players-list-title">PLAYERS LIST</h3>
+        {tournamentName && <p className="tournament-line"><strong>Tournament Name:</strong> {tournamentName}</p>}
+        {category && <p className="tournament-line"><strong>Category:</strong> {category}</p>}
 
-  <table className="players-table">
-    <thead>
-      <tr>
-        <th>S.NO</th>
-        <th>NAME</th>
-        <th>DOB</th>
-        <th>JERSEY NO</th>
-      </tr>
-    </thead>
-    <tbody>
-      {selectedStudents.map((s, index) => (
-        <tr key={s.id}>
-          <td>{index + 1}</td>
-          <td>{s.name}</td>
-          <td>{s.dob}</td>
-          <td>{jerseyNumbers[s.id] || '-'}</td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
+        {selectedStudents.length > 0 && (
+          <>
+            <h3 className="players-list-title">PLAYERS LIST</h3>
+            <table className="players-table">
+              <thead>
+                <tr>
+                  <th>S.NO</th>
+                  <th>NAME</th>
+                  <th>DOB</th>
+                  <th>JERSEY NO</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedStudents.map((s, index) => (
+                  <tr key={s.id}>
+                    <td>{index + 1}</td>
+                    <td>{s.name}</td>
+                    <td>{s.dob}</td>
+                    <td>{jerseyNumbers[s.id] || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-  <div className="print-footer">
+            <div className="print-footer">
+  <div className="footer-coach-block">
     <p><strong>COACH NAME:</strong> {selectedCoach || '-'}</p>
     <p><strong>ASST.COACH:</strong> {selectedAsstCoach || '-'}</p>
-    <p className="secretary-line">SECRETARY<br />ARUTCHELVAR BASKETBALL ACADEMY</p>
+  </div>
+  <div className="footer-secretary-block">
+    <p>SECRETARY</p>
+    <p>{identity.name.toUpperCase()}</p>
   </div>
 </div>
-</div>
+</>
+
+        )}
+      </div>
+    </div>
   );
 }
 
