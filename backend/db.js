@@ -129,6 +129,7 @@ await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS coach_id INTEGER RE
 await pool.query(`ALTER TABLE attendance ADD COLUMN IF NOT EXISTS coach_id INTEGER REFERENCES coaches(id)`);
 await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS email TEXT`);
 await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS aadhaar_no TEXT`);
+await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()`);
 console.log('All tables ready.');
 }
 

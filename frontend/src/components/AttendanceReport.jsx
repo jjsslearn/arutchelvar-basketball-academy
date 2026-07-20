@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import apiFetch from '../api';
-function AttendanceReport() {
+function AttendanceReport({ user }) {
   const [batches, setBatches] = useState([]);
   const [selectedBatch, setSelectedBatch] = useState('');
   const [month, setMonth] = useState('');
@@ -72,31 +72,33 @@ function loadStats(studentId) {
 
         <button type="button" onClick={handlePrint}>Print Report</button>
       </div>
-      <div className="no-print">
-  <h3>Attendance Stats</h3>
-  <select
-    value={selectedStudentId}
-    onChange={(e) => {
-      setSelectedStudentId(e.target.value);
-      if (e.target.value) loadStats(e.target.value);
-    }}
-  >
-    <option value="">-- Select Student for Stats --</option>
-    {students.map((s) => (
-      <option key={s.id} value={s.id}>{s.name}</option>
-    ))}
-  </select>
-
-  {stats.length > 0 && (
-    <ul>
-      {stats.map((s) => (
-        <li key={s.batch_id}>
-          {s.batch_name}: {s.classes_attended} / {s.total_classes} classes attended
-        </li>
+      {user?.role !== 'student' && (
+  <div className="no-print">
+    <h3>Attendance Stats</h3>
+    <select
+      value={selectedStudentId}
+      onChange={(e) => {
+        setSelectedStudentId(e.target.value);
+        if (e.target.value) loadStats(e.target.value);
+      }}
+    >
+      <option value="">-- Select Student for Stats --</option>
+      {students.map((s) => (
+        <option key={s.id} value={s.id}>{s.name}</option>
       ))}
-    </ul>
+    </select>
+
+    {stats.length > 0 && (
+      <ul>
+        {stats.map((s) => (
+          <li key={s.batch_id}>
+            {s.batch_name}: {s.classes_attended} / {s.total_classes} classes attended
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
   )}
-</div>
 
       {studentNames.length > 0 && (
   <table className="attendance-table">

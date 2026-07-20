@@ -73,7 +73,10 @@ if (user.role === 'student' && !user.student_id) {
       {view === 'dashboard' && (
         <div className="dashboard-grid">
           {user.role === 'admin' && (
-  <button onClick={() => setView('studentForm')}>Student Registration</button>
+          <button onClick={() => setView('studentForm')}>Student Registration</button>
+          )}
+          {user.role === 'student' && (
+          <button onClick={() => setView('myRegistration')}>My Registration</button>
           )}
           {(user.role === 'admin' || user.role === 'coach') && (
             <button onClick={() => setView('attendance')}>Attendance</button>
@@ -111,6 +114,7 @@ if (user.role === 'student' && !user.student_id) {
       {view === 'attendanceReport' && <AttendanceReport user={user} />}
       {view === 'loginLog' && <LoginLog />}
       {view === 'teamSelection' && <TeamSelection />}
+      {view === 'myRegistration' && <SelfRegistration onComplete={() => {}} />}
     </div>
   );
 }

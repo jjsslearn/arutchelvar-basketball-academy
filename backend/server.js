@@ -212,15 +212,56 @@ app.post('/students/self', requireAuth, requireRole('student'), async (req, res)
     }
 
     const studentResult = await pool.query(
-  `INSERT INTO students (name, class, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no)
-   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
-  [name, studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no]
-);
+      `INSERT INTO students (name, class, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+      [name, studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no]
+    );
 
     // Link this new student record to the logged-in user's own account
     await pool.query('UPDATE users SET student_id = $1 WHERE id = $2', [studentResult.rows[0].id, req.user.id]);
 
     res.status(201).json({ id: studentResult.rows[0].id, message: 'Registration completed successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// A student views their own registration
+app.get('/students/self', requireAuth, requireRole('student'), async (req, res) => {
+  if (!req.user.student_id) {
+    return res.status(404).json({ error: 'No registration found' });
+  }
+  try {
+    const result = await pool.query('SELECT * FROM students WHERE id = $1', [req.user.student_id]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// A student edits their own registration, only within 7 days of creating it
+app.put('/students/self', requireAuth, requireRole('student'), async (req, res) => {
+  if (!req.user.student_id) {
+    return res.status(404).json({ error: 'No registration found' });
+  }
+
+  const { name, class: studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no } = req.body;
+
+  try {
+    const check = await pool.query('SELECT created_at FROM students WHERE id = $1', [req.user.student_id]);
+    const createdAt = new Date(check.rows[0].created_at);
+    const daysSince = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
+
+    if (daysSince > 7) {
+      return res.status(403).json({ error: 'Edit window has expired. Please contact admin for changes.' });
+    }
+
+    await pool.query(
+      `UPDATE students SET name = $1, class = $2, school = $3, dob = $4, phone1 = $5,
+       phone2 = $6, father_name = $7, mother_name = $8, address = $9, email = $10, aadhaar_no = $11 WHERE id = $12`,
+      [name, studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no, req.user.student_id]
+    );
+    res.json({ message: 'Registration updated successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

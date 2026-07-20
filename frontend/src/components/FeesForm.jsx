@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import apiFetch from '../api';
 
-function FeesForm() {
+function FeesForm({ user }) {
   const [month, setMonth] = useState('');
   const [category, setCategory] = useState('Monthly Fee');
   const [search, setSearch] = useState('');
@@ -91,11 +91,13 @@ function FeesForm() {
         </select>
       </label>
 
+      {user?.role !== 'student' && (
       <input
-        placeholder="Search student name"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+    placeholder="Search student name"
+    value={search}
+    onChange={(e) => setSearch(e.target.value)}
+    />
+    )}
 
       {month && category && (
         <>
