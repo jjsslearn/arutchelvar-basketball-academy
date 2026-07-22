@@ -617,6 +617,20 @@ app.get('/auth/login-log', requireAuth, requireRole('admin'), async (req, res) =
     res.status(500).json({ error: err.message });
   }
 });
+app.get('/auth/students-list', requireAuth, requireRole('admin'), async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT users.username, students.name AS student_name
+      FROM users
+      LEFT JOIN students ON users.student_id = students.id
+      WHERE users.role = 'student'
+      ORDER BY users.username
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

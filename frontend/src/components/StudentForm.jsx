@@ -118,36 +118,57 @@ function StudentForm() {
       </form>
       {message && <p>{message}</p>}
 
-      <h3>Registered Students</h3>
-      <ul className="student-list">
-        {students.map((s) => (
-          <li key={s.id}>
-            {editingId === s.id ? (
-              <div className="edit-block">
-                <input name="name" value={editData.name} onChange={handleEditChange} placeholder="Name" />
-                <input name="class" value={editData.class} onChange={handleEditChange} placeholder="Class" />
-                <input name="school" value={editData.school} onChange={handleEditChange} placeholder="School" />
-                <input name="dob" type="date" value={editData.dob} onChange={handleEditChange} />
-                <input name="phone1" value={editData.phone1} onChange={handleEditChange} placeholder="Phone 1" />
-                <input name="phone2" value={editData.phone2} onChange={handleEditChange} placeholder="Phone 2" />
-                <input name="father_name" value={editData.father_name} onChange={handleEditChange} placeholder="Father's Name" />
-                <input name="mother_name" value={editData.mother_name} onChange={handleEditChange} placeholder="Mother's Name" />
-                <input name="address" value={editData.address} onChange={handleEditChange} placeholder="Address" />
-                <button type="button" onClick={() => handleUpdate(s.id)}>Save</button>
-                <button type="button" onClick={() => setEditingId(null)}>Cancel</button>
-              </div>
-            ) : (
-              <>
-                <span>{s.name} ({s.class}) — {s.phone1} {s.dob && `— Age ${calculateAge(s.dob)}`}</span>
-                <span>
-                  <button type="button" onClick={() => startEdit(s)}>Edit</button>
-                  <button type="button" onClick={() => handleDelete(s.id, s.name)}>Delete</button>
-                </span>
-              </>
-            )}
-          </li>
-        ))}
-      </ul>
+     <h3>Registered Students</h3>
+<table className="students-table">
+  <thead>
+    <tr>
+      <th>S.No</th>
+      <th>Name</th>
+      <th>Class</th>
+      <th>Age</th>
+      <th>Phone Number</th>
+      <th>Edit</th>
+      <th>Delete</th>
+    </tr>
+  </thead>
+  <tbody>
+    {[...students].sort((a, b) => new Date(b.dob) - new Date(a.dob)).map((s, index) => (
+      editingId === s.id ? (
+        <tr key={s.id}>
+          <td colSpan="6">
+            <div className="edit-block">
+              <input name="name" value={editData.name} onChange={handleEditChange} placeholder="Name" />
+              <input name="class" value={editData.class} onChange={handleEditChange} placeholder="Class" />
+              <input name="school" value={editData.school} onChange={handleEditChange} placeholder="School" />
+              <input name="dob" type="date" value={editData.dob} onChange={handleEditChange} />
+              <input name="phone1" value={editData.phone1} onChange={handleEditChange} placeholder="Phone 1" />
+              <input name="phone2" value={editData.phone2} onChange={handleEditChange} placeholder="Phone 2" />
+              <input name="father_name" value={editData.father_name} onChange={handleEditChange} placeholder="Father's Name" />
+              <input name="mother_name" value={editData.mother_name} onChange={handleEditChange} placeholder="Mother's Name" />
+              <input name="address" value={editData.address} onChange={handleEditChange} placeholder="Address" />
+              <button type="button" onClick={() => handleUpdate(s.id)}>Save</button>
+              <button type="button" onClick={() => setEditingId(null)}>Cancel</button>
+            </div>
+          </td>
+        </tr>
+      ) : (
+        <tr key={s.id}>
+          <td>{index + 1}</td>
+          <td>{s.name}</td>
+          <td>{s.class}</td>
+          <td>{s.dob ? calculateAge(s.dob) : '-'}</td>
+          <td>{s.phone1}</td>
+          <td>
+            <button type="button" onClick={() => startEdit(s)}>Edit</button>
+          </td>
+          <td>
+            <button type="button" onClick={() => handleDelete(s.id, s.name)}>Delete</button>
+          </td>
+        </tr>
+      )
+    ))}
+  </tbody>
+</table>
     </div>
   );
 }
