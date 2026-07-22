@@ -186,6 +186,10 @@ app.delete('/students/:id', requireAuth, requireRole('admin'), async (req, res) 
     await pool.query('DELETE FROM attendance WHERE student_id = $1', [id]);
     await pool.query('DELETE FROM fee_payments WHERE student_id = $1', [id]);
     await pool.query('DELETE FROM team_members WHERE student_id = $1', [id]);
+    await pool.query(
+      'DELETE FROM login_log WHERE user_id IN (SELECT id FROM users WHERE student_id = $1)',
+      [id]
+    );
     await pool.query('DELETE FROM users WHERE student_id = $1', [id]);
     await pool.query('DELETE FROM students WHERE id = $1', [id]);
     res.json({ message: 'Student deleted successfully' });
@@ -195,10 +199,11 @@ app.delete('/students/:id', requireAuth, requireRole('admin'), async (req, res) 
 });
 // A student fills in their own profile for the first time
 app.post('/students/self', requireAuth, requireRole('student'), async (req, res) => {
-  if (req.user.student_id) {
+  // Check the database directly, not the token, since tokens can be stale
+  const userCheck = await pool.query('SELECT student_id FROM users WHERE id = $1', [req.user.id]);
+  if (userCheck.rows[0].student_id) {
     return res.status(400).json({ error: 'Your registration is already complete' });
   }
-
   const { name, class: studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no } = req.body;
 
   try {
