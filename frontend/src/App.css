@@ -243,8 +243,20 @@ p {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
+  padding: 10px 0;
   border-bottom: 1px solid #eee;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.student-list li > span:first-child {
+  flex: 1 1 auto;
+  min-width: 200px;
+}
+
+.student-list li > span:last-child {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .student-list button {
