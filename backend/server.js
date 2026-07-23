@@ -161,42 +161,10 @@ app.get('/students', requireAuth, requireRole('admin', 'coach'), async (req, res
     res.status(500).json({ error: err.message });
   }
 });
-// Update a student's details
-app.put('/students/:id', requireAuth, requireRole('admin'), async (req, res) => {
-  const { id } = req.params;
-  const { name, class: studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no } = req.body;
-  try {
-    await pool.query(
-      `UPDATE students SET name = $1, class = $2, school = $3, dob = $4, phone1 = $5,
-       phone2 = $6, father_name = $7, mother_name = $8, address = $9, email = $10, aadhaar_no = $11 WHERE id = $12`,
-      [name, studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no, id]
-    );
-    res.json({ message: 'Student updated successfully' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
-// Delete a student
-app.delete('/students/:id', requireAuth, requireRole('admin'), async (req, res) => {
-  const { id } = req.params;
-  try {
-    // Clean up related records first, so we don't leave orphaned data
-    await pool.query('DELETE FROM batch_students WHERE student_id = $1', [id]);
-    await pool.query('DELETE FROM attendance WHERE student_id = $1', [id]);
-    await pool.query('DELETE FROM fee_payments WHERE student_id = $1', [id]);
-    await pool.query('DELETE FROM team_members WHERE student_id = $1', [id]);
-    await pool.query(
-      'DELETE FROM login_log WHERE user_id IN (SELECT id FROM users WHERE student_id = $1)',
-      [id]
-    );
-    await pool.query('DELETE FROM users WHERE student_id = $1', [id]);
-    await pool.query('DELETE FROM students WHERE id = $1', [id]);
-    res.json({ message: 'Student deleted successfully' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// ----- IMPORTANT: these /students/self routes MUST come before /students/:id routes below,
+// otherwise Express will match "self" as if it were an :id parameter. -----
+
 // A student fills in their own profile for the first time
 app.post('/students/self', requireAuth, requireRole('student'), async (req, res) => {
   // Check the database directly, not the token, since tokens can be stale
@@ -267,6 +235,43 @@ app.put('/students/self', requireAuth, requireRole('student'), async (req, res) 
       [name, studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no, req.user.student_id]
     );
     res.json({ message: 'Registration updated successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update a student's details (admin)
+app.put('/students/:id', requireAuth, requireRole('admin'), async (req, res) => {
+  const { id } = req.params;
+  const { name, class: studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no } = req.body;
+  try {
+    await pool.query(
+      `UPDATE students SET name = $1, class = $2, school = $3, dob = $4, phone1 = $5,
+       phone2 = $6, father_name = $7, mother_name = $8, address = $9, email = $10, aadhaar_no = $11 WHERE id = $12`,
+      [name, studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no, id]
+    );
+    res.json({ message: 'Student updated successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a student
+app.delete('/students/:id', requireAuth, requireRole('admin'), async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Clean up related records first, so we don't leave orphaned data
+    await pool.query('DELETE FROM batch_students WHERE student_id = $1', [id]);
+    await pool.query('DELETE FROM attendance WHERE student_id = $1', [id]);
+    await pool.query('DELETE FROM fee_payments WHERE student_id = $1', [id]);
+    await pool.query('DELETE FROM team_members WHERE student_id = $1', [id]);
+    await pool.query(
+      'DELETE FROM login_log WHERE user_id IN (SELECT id FROM users WHERE student_id = $1)',
+      [id]
+    );
+    await pool.query('DELETE FROM users WHERE student_id = $1', [id]);
+    await pool.query('DELETE FROM students WHERE id = $1', [id]);
+    res.json({ message: 'Student deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
