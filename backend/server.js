@@ -58,7 +58,7 @@ app.post('/auth/login', async (req, res) => {
     const token = jwt.sign(
       { id: user.id, username: user.username, role: user.role, student_id: user.student_id, coach_id: user.coach_id },
       process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '31d' }
     );
 
     // Record this login for tracking purposes
@@ -98,6 +98,25 @@ app.post('/auth/reset-password', requireAuth, requireRole('admin'), async (req, 
       return res.status(404).json({ error: 'User not found' });
     }
     res.json({ message: 'Password reset successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// Admin deletes a login (only if not linked to an actual student record, to avoid orphaning data)
+app.delete('/auth/users/:username', requireAuth, requireRole('admin'), async (req, res) => {
+  const { username } = req.params;
+  try {
+    const check = await pool.query('SELECT student_id FROM users WHERE username = $1', [username]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    if (check.rows[0].student_id) {
+      return res.status(400).json({ error: 'This login is linked to a completed registration. Delete the student instead (from Student Registration) to remove both.' });
+    }
+
+    await pool.query('DELETE FROM login_log WHERE user_id = (SELECT id FROM users WHERE username = $1)', [username]);
+    await pool.query('DELETE FROM users WHERE username = $1', [username]);
+    res.json({ message: 'Login deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

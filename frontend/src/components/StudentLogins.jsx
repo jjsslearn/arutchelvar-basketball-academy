@@ -39,6 +39,21 @@ function StudentLogins() {
       setMessage('Error: Could not connect to server');
     }
   }
+  async function handleDeleteLogin(username) {
+  if (!window.confirm(`Delete unused login "${username}"?`)) return;
+  try {
+    const response = await apiFetch(`/auth/users/${username}`, { method: 'DELETE' });
+    const data = await response.json();
+    if (response.ok) {
+      setMessage(`Login "${username}" deleted`);
+      loadLogins();
+    } else {
+      setMessage(`Error: ${data.error}`);
+    }
+  } catch (err) {
+    setMessage('Error: Could not connect to server');
+  }
+}
 
   return (
     <div>
@@ -46,22 +61,27 @@ function StudentLogins() {
       <p>Passwords can't be viewed once set (they're securely encrypted), but you can reset any student's password below.</p>
 
       <table className="students-table">
-        <thead>
-          <tr>
-            <th>Username</th>
-            <th>Student Name</th>
-          </tr>
-        </thead>
-        <tbody>
-          {logins.map((l, i) => (
-            <tr key={i}>
-              <td>{l.username}</td>
-              <td>{l.student_name || '(not registered yet)'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
+  <thead>
+    <tr>
+      <th>Username</th>
+      <th>Student Name</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {logins.map((l, i) => (
+      <tr key={i}>
+        <td>{l.username}</td>
+        <td>{l.student_name || '(not registered yet)'}</td>
+        <td>
+          {!l.student_name && (
+            <button type="button" onClick={() => handleDeleteLogin(l.username)}>Delete</button>
+          )}
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
       <h3>Reset a Password</h3>
       <form onSubmit={handleReset}>
         <select value={resetUsername} onChange={(e) => setResetUsername(e.target.value)} required>
