@@ -465,3 +465,26 @@ p {
   padding: 4px 10px;
   font-size: 13px;
 }
+.print-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  color: #555;
+}
+
+.print-controls select,
+.print-controls input {
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+.players-table .col-center {
+  text-align: center;
+}
+
+.players-table .col-name {
+  text-align: left;
+}

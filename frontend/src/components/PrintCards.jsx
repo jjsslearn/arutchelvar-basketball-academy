@@ -48,6 +48,7 @@ function PrintCards() {
       setJerseyNumbers({});
       return;
     }
+    
     const response = await apiFetch(`/teams/${teamId}`);
     const team = await response.json();
 
@@ -66,12 +67,17 @@ function PrintCards() {
   function handlePrint() {
     window.print();
   }
+  function formatDOB(dob) {
+    if (!dob) return '-';
+    const [year, month, day] = dob.split('-');
+    return `${day}/${month}/${year}`;
+    }
 
   return (
     <div>
       <h2 className="no-print">Print Player Cards</h2>
 
-      <div className="no-print">
+      <div className="no-print print-controls">
         <label>
           Club Identity:
           <select value={identityKey} onChange={(e) => setIdentityKey(e.target.value)}>
@@ -158,14 +164,14 @@ function PrintCards() {
               </thead>
               <tbody>
                 {selectedStudents.map((s, index) => (
-                  <tr key={s.id}>
-                    <td>{index + 1}</td>
-                    <td>{s.name}</td>
-                    <td>{s.dob}</td>
-                    <td>{jerseyNumbers[s.id] || '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
+                <tr key={s.id}>
+                <td className="col-center">{index + 1}</td>
+                <td className="col-name">{s.name.toUpperCase()}</td>
+                <td className="col-center">{formatDOB(s.dob)}</td>
+                <td className="col-center">{jerseyNumbers[s.id] || '-'}</td>
+              </tr>
+              ))}
+                </tbody>
             </table>
 
             <div className="print-footer">
