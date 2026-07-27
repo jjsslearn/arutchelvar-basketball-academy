@@ -34,6 +34,17 @@ function AttendanceForm() {
       })
       .catch((err) => console.error('Error loading students:', err));
   }, [selectedBatch]);
+  
+  function calculateAge(dob) {
+  const birthDate = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
 
   function toggleStatus(studentId) {
     setAttendance((prev) => ({
@@ -95,12 +106,26 @@ function AttendanceForm() {
       </label>
 
       {students.length > 0 && (
-        <div>
-          <h3>Mark Attendance:</h3>
-          <ul className="attendance-list">
-            {students.map((student) => (
-              <li key={student.id}>
-                <span>{student.name} ({student.class})</span>
+  <div>
+    <h3>Mark Attendance:</h3>
+    <table className="students-table">
+      <thead>
+        <tr>
+          <th>S.No</th>
+          <th>Name</th>
+          <th>Age</th>
+          <th>Present</th>
+        </tr>
+      </thead>
+      <tbody>
+        {[...new Map(students.map((s) => [s.id, s])).values()]
+          .sort((a, b) => new Date(b.dob) - new Date(a.dob))
+          .map((student, index) => (
+            <tr key={student.id}>
+              <td>{index + 1}</td>
+              <td>{student.name}</td>
+              <td>{student.dob ? calculateAge(student.dob) : '-'}</td>
+              <td>
                 <button
                   type="button"
                   className={attendance[student.id] === 'present' ? 'present-btn' : 'absent-btn'}
@@ -108,12 +133,14 @@ function AttendanceForm() {
                 >
                   {attendance[student.id] === 'present' ? 'Present' : 'Absent'}
                 </button>
-              </li>
-            ))}
-          </ul>
-          <button type="button" onClick={handleSaveAttendance}>Save Attendance</button>
-        </div>
-      )}
+              </td>
+            </tr>
+          ))}
+      </tbody>
+    </table>
+    <button type="button" onClick={handleSaveAttendance}>Save Attendance</button>
+  </div>
+)}
 
       {message && <p>{message}</p>}
     </div>

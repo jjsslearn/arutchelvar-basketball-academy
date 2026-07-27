@@ -380,7 +380,7 @@ app.get('/batches/:batchId/students', requireAuth, requireRole('admin', 'coach')
   const { batchId } = req.params;
   try {
     const result = await pool.query(
-      `SELECT students.id, students.name, students.class
+      `SELECT students.id, students.name, students.class, students.dob
        FROM batch_students
        JOIN students ON batch_students.student_id = students.id
        WHERE batch_students.batch_id = $1`,
