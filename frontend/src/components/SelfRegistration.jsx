@@ -11,6 +11,7 @@ function SelfRegistration({ onComplete }) {
     email: '', aadhaar_no: ''
   });
   const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     loadMyData();
@@ -38,8 +39,10 @@ function SelfRegistration({ onComplete }) {
   }
 
   async function handleSubmit(e) {
-    e.preventDefault();
-    setMessage('');
+  e.preventDefault();
+  if (submitting) return;
+  setSubmitting(true);
+  setMessage('');
 
     const isFirstTime = !student;
     const url = '/students/self';
@@ -63,13 +66,16 @@ function SelfRegistration({ onComplete }) {
     } catch (err) {
       setMessage('Error: Could not connect to server');
     }
+    finally {
+  setSubmitting(false);
+}
   }
 
   function daysRemaining() {
     if (!student?.created_at) return 0;
     const createdAt = new Date(student.created_at);
     const daysSince = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
-    return Math.max(0, Math.ceil(7 - daysSince));
+    return Math.max(0, Math.ceil(31 - daysSince));
   }
 
   if (loading) return <p>Loading...</p>;
@@ -103,7 +109,7 @@ function SelfRegistration({ onComplete }) {
           <input name="email" type="email" placeholder="Email" value={formData.email || ''} onChange={handleChange} />
           <input name="aadhaar_no" placeholder="Aadhaar Number" value={formData.aadhaar_no || ''} onChange={handleChange} />
 
-          <button type="submit">{isFirstTime ? 'Submit Registration' : 'Save Changes'}</button>
+          <button type="submit" disabled={submitting}>{submitting ? 'Submitting...' : (isFirstTime ? 'Submit Registration' : 'Save Changes')}</button>
           {!isFirstTime && (
             <button type="button" onClick={() => { setEditing(false); setFormData(student); }}>Cancel</button>
           )}
