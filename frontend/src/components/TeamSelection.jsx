@@ -10,6 +10,10 @@ function TeamSelection() {
   const [selectedPlayers, setSelectedPlayers] = useState([]);
   const [message, setMessage] = useState('');
   const [teams, setTeams] = useState([]);
+  const [editingTeamId, setEditingTeamId] = useState(null);
+  const [editingTeamMembers, setEditingTeamMembers] = useState([]);
+  const [addPlayerId, setAddPlayerId] = useState('');
+  const [addJersey, setAddJersey] = useState('');
 
   useEffect(() => {
     apiFetch('/students').then((r) => r.json()).then(setAllStudents);
@@ -75,6 +79,67 @@ function TeamSelection() {
       setMessage('Error: Could not connect to server');
     }
   }
+async function handleDeleteTeam(id, name) {
+  if (!window.confirm(`Delete team "${name}"?`)) return;
+  try {
+    const response = await apiFetch(`/teams/${id}`, { method: 'DELETE' });
+    const data = await response.json();
+    if (response.ok) {
+      setMessage(`Team "${name}" deleted`);
+      loadTeams();
+      if (editingTeamId === id) setEditingTeamId(null);
+    } else {
+      setMessage(`Error: ${data.error}`);
+    }
+  } catch (err) {
+    setMessage('Error: Could not connect to server');
+  }
+}
+
+async function startEditTeam(teamId) {
+  setEditingTeamId(teamId);
+  const response = await apiFetch(`/teams/${teamId}`);
+  const team = await response.json();
+  setEditingTeamMembers(team.members);
+}
+
+async function handleAddPlayer(e) {
+  e.preventDefault();
+  setMessage('');
+  try {
+    const response = await apiFetch(`/teams/${editingTeamId}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ student_id: addPlayerId, jersey_number: addJersey })
+    });
+    const data = await response.json();
+    if (response.ok) {
+      setAddPlayerId('');
+      setAddJersey('');
+      startEditTeam(editingTeamId);
+    } else {
+      setMessage(`Error: ${data.error}`);
+    }
+  } catch (err) {
+    setMessage('Error: Could not connect to server');
+  }
+}
+
+async function handleRemovePlayer(studentId, studentName) {
+  if (!window.confirm(`Remove ${studentName} from this team?`)) return;
+  try {
+    const response = await apiFetch(`/teams/${editingTeamId}/members/${studentId}`, {
+      method: 'DELETE'
+    });
+    const data = await response.json();
+    if (response.ok) {
+      startEditTeam(editingTeamId);
+    } else {
+      alert(`Error: ${data.error}`);
+    }
+  } catch (err) {
+    alert('Error: Could not connect to server');
+  }
+}
 
   const filteredStudents = allStudents.filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase())
@@ -130,11 +195,72 @@ function TeamSelection() {
       {message && <p>{message}</p>}
 
       <h3>Saved Teams:</h3>
-      <ul>
-        {teams.map((t) => (
-          <li key={t.id}>{t.name} — Coach: {t.coach_name || 'Unassigned'}</li>
+<table className="students-table">
+  <thead>
+    <tr>
+      <th>Team Name</th>
+      <th>Coach</th>
+      <th>Edit</th>
+      <th>Delete</th>
+    </tr>
+  </thead>
+  <tbody>
+    {teams.map((t) => (
+      <tr key={t.id}>
+        <td>{t.name}</td>
+        <td>{t.coach_name || 'Unassigned'}</td>
+        <td>
+          <button type="button" onClick={() => startEditTeam(t.id)}>Edit</button>
+        </td>
+        <td>
+          <button type="button" onClick={() => handleDeleteTeam(t.id, t.name)}>Delete</button>
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+
+{editingTeamId && (
+  <div>
+    <h3>Editing Team Roster ({editingTeamMembers.length} players)</h3>
+    <table className="students-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Jersey #</th>
+          <th>Remove</th>
+        </tr>
+      </thead>
+      <tbody>
+        {editingTeamMembers.map((m) => (
+          <tr key={m.id}>
+            <td>{m.name}</td>
+            <td>{m.jersey_number || '-'}</td>
+            <td>
+              <button type="button" onClick={() => handleRemovePlayer(m.id, m.name)}>Remove</button>
+            </td>
+          </tr>
         ))}
-      </ul>
+      </tbody>
+    </table>
+
+    <h4>Add a Player</h4>
+    <form onSubmit={handleAddPlayer}>
+      <select value={addPlayerId} onChange={(e) => setAddPlayerId(e.target.value)} required>
+        <option value="">-- Select Student --</option>
+        {allStudents
+          .filter((s) => !editingTeamMembers.some((m) => m.id === s.id))
+          .map((s) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
+          ))}
+      </select>
+      <input placeholder="Jersey #" value={addJersey} onChange={(e) => setAddJersey(e.target.value)} />
+      <button type="submit">Add Player</button>
+    </form>
+
+    <button type="button" onClick={() => setEditingTeamId(null)}>Close</button>
+  </div>
+)}
     </div>
   );
 }

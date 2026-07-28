@@ -509,6 +509,54 @@ app.get('/teams/:id', requireAuth, requireRole('admin', 'coach'), async (req, re
   }
 });
 
+// Delete a team
+app.delete('/teams/:id', requireAuth, requireRole('admin'), async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM team_members WHERE team_id = $1', [id]);
+    await pool.query('DELETE FROM teams WHERE id = $1', [id]);
+    res.json({ message: 'Team deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Add a player to an existing team
+app.post('/teams/:id/members', requireAuth, requireRole('admin'), async (req, res) => {
+  const { id } = req.params;
+  const { student_id, jersey_number } = req.body;
+  try {
+    const countCheck = await pool.query('SELECT COUNT(*) FROM team_members WHERE team_id = $1', [id]);
+    if (parseInt(countCheck.rows[0].count) >= 12) {
+      return res.status(400).json({ error: 'Team already has the maximum of 12 players' });
+    }
+
+    const result = await pool.query(
+      'INSERT INTO team_members (team_id, student_id, jersey_number) VALUES ($1, $2, $3) RETURNING id',
+      [id, student_id, jersey_number]
+    );
+    res.status(201).json({ id: result.rows[0].id, message: 'Player added to team' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Remove a player from a team
+app.delete('/teams/:id/members/:studentId', requireAuth, requireRole('admin'), async (req, res) => {
+  const { id, studentId } = req.params;
+  try {
+    const countCheck = await pool.query('SELECT COUNT(*) FROM team_members WHERE team_id = $1', [id]);
+    if (parseInt(countCheck.rows[0].count) <= 5) {
+      return res.status(400).json({ error: 'Team must have at least 5 players' });
+    }
+
+    await pool.query('DELETE FROM team_members WHERE team_id = $1 AND student_id = $2', [id, studentId]);
+    res.json({ message: 'Player removed from team' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/attendance', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
   const { batch_id, date, records } = req.body;
   const markedByCoachId = req.user.coach_id || null;
