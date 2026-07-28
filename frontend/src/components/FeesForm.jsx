@@ -32,6 +32,16 @@ function FeesForm({ user }) {
       .then((data) => setTotal(data.total))
       .catch((err) => console.error('Error loading total:', err));
   }
+  function calculateAge(dob) {
+  const birthDate = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
 
   async function handleMarkPaid(studentId) {
     setMessage('');
@@ -77,67 +87,87 @@ function FeesForm({ user }) {
     <div>
       <h2>Fees</h2>
 
-      <label>
-        Month:
-        <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
-      </label>
+      <div className="print-controls">
+  <label>
+    Month:
+    <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+  </label>
 
-      <label>
-        Category:
-        <select value={category} onChange={(e) => setCategory(e.target.value)}>
-          <option value="Monthly Fee">Monthly Fee</option>
-          <option value="Tournament Fee">Tournament Fee</option>
-          <option value="Extra Coaching">Extra Coaching</option>
-        </select>
-      </label>
+  <label>
+    Category:
+    <select value={category} onChange={(e) => setCategory(e.target.value)}>
+      <option value="Monthly Fee">Monthly Fee</option>
+      <option value="Tournament Fee">Tournament Fee</option>
+      <option value="Extra Coaching">Extra Coaching</option>
+    </select>
+  </label>
 
-      {user?.role !== 'student' && (
+  {user?.role !== 'student' && (
+    <label>
+      Search Student:
       <input
-    placeholder="Search student name"
-    value={search}
-    onChange={(e) => setSearch(e.target.value)}
-    />
-    )}
+        placeholder="Search student name"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+    </label>
+  )}
+</div>
 
       {month && category && (
         <>
           <p><strong>Total Collected: ₹{total}</strong></p>
 
-          <ul className="fees-list">
-            {filteredStudents.map((student) => {
-              const isPaid = student.amount !== null;
-              return (
-                <li key={student.student_id} className={isPaid ? 'paid-row' : 'unpaid-row'}>
-                  <span>{student.name} ({student.class})</span>
-
-                  {isPaid ? (
-                    <span>Paid ₹{student.amount} on {student.paid_date}</span>
-                  ) : payingStudentId === student.student_id ? (
-                    <span className="pay-inputs">
-                      <input
-                        type="number"
-                        placeholder="Amount"
-                        value={payAmount}
-                        onChange={(e) => setPayAmount(e.target.value)}
-                      />
-                      <input
-                        type="date"
-                        value={payDate}
-                        onChange={(e) => setPayDate(e.target.value)}
-                      />
-                      <button type="button" onClick={() => handleMarkPaid(student.student_id)}>
-                        Confirm
-                      </button>
-                    </span>
-                  ) : (
-                    <button type="button" onClick={() => setPayingStudentId(student.student_id)}>
-                      Mark Paid
-                    </button>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+          <table className="students-table">
+  <thead>
+    <tr>
+      <th>S.No</th>
+      <th>Name</th>
+      <th>Age</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {[...filteredStudents]
+      .sort((a, b) => new Date(b.dob) - new Date(a.dob))
+      .map((student, index) => {
+        const isPaid = student.amount !== null;
+        return (
+          <tr key={student.student_id} className={isPaid ? 'paid-row' : 'unpaid-row'}>
+            <td>{index + 1}</td>
+            <td>{student.name}</td>
+            <td>{student.dob ? calculateAge(student.dob) : '-'}</td>
+            <td>
+              {isPaid ? (
+                <span>Paid ₹{student.amount} on {student.paid_date}</span>
+              ) : payingStudentId === student.student_id ? (
+                <span className="pay-inputs">
+                  <input
+                    type="number"
+                    placeholder="Amount"
+                    value={payAmount}
+                    onChange={(e) => setPayAmount(e.target.value)}
+                  />
+                  <input
+                    type="date"
+                    value={payDate}
+                    onChange={(e) => setPayDate(e.target.value)}
+                  />
+                  <button type="button" onClick={() => handleMarkPaid(student.student_id)}>
+                    Confirm
+                  </button>
+                </span>
+              ) : (
+                <button type="button" onClick={() => setPayingStudentId(student.student_id)}>
+                  Mark Paid
+                </button>
+              )}
+            </td>
+          </tr>
+        );
+        })}
+  </tbody>
+  </table>
         </>
       )}
 

@@ -13,6 +13,7 @@ import LoginLog from './components/LoginLog';
 import TeamSelection from './components/TeamSelection';
 import ChangePassword from './components/ChangePassword';
 import StudentLogins from './components/StudentLogins';
+import CoachAttendance from './components/CoachAttendance';
 function App() {
   const [user, setUser] = useState(null);
   const [view, setView] = useState('dashboard');
@@ -107,6 +108,9 @@ if (user.role === 'student' && !user.student_id) {
           {user.role === 'admin' && (
           <button onClick={() => setView('studentLogins')}>Student Logins</button>
           )}
+          {user.role === 'admin' && (
+          <button onClick={() => setView('coachAttendance')}>Coach Attendance</button>
+          )}
         </div>
       )}
 
@@ -122,6 +126,7 @@ if (user.role === 'student' && !user.student_id) {
       {view === 'myRegistration' && <SelfRegistration onComplete={() => {}} />}
       {view === 'changePassword' && <ChangePassword />}
       {view === 'studentLogins' && <StudentLogins />}
+      {view === 'coachAttendance' && <CoachAttendance />}
     </div>
   );
 }

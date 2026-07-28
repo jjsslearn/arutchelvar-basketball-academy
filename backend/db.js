@@ -124,6 +124,15 @@ await pool.query(`
     jersey_number TEXT
   )
 `);
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS coach_attendance (
+    id SERIAL PRIMARY KEY,
+    coach_id INTEGER NOT NULL REFERENCES coaches(id),
+    date TEXT NOT NULL,
+    morning_status TEXT,
+    evening_status TEXT
+  )
+`);
 // Add new columns if they don't already exist (for databases created before this update)
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS coach_id INTEGER REFERENCES coaches(id)`);
 await pool.query(`ALTER TABLE attendance ADD COLUMN IF NOT EXISTS coach_id INTEGER REFERENCES coaches(id)`);

@@ -30,7 +30,6 @@ app.post('/auth/register', async (req, res) => {
     res.status(201).json({ message: 'User registered successfully', user: result.rows[0] });
   } catch (err) {
     if (err.code === '23505') {
-      // Postgres's error code for "unique constraint violated"
       res.status(400).json({ error: 'Username already taken' });
     } else {
       res.status(500).json({ error: err.message });
@@ -38,7 +37,6 @@ app.post('/auth/register', async (req, res) => {
   }
 });
 
-// Login
 app.post('/auth/login', async (req, res) => {
   const { username, password } = req.body;
 
@@ -61,7 +59,6 @@ app.post('/auth/login', async (req, res) => {
       { expiresIn: '31d' }
     );
 
-    // Record this login for tracking purposes
     await pool.query(
       'INSERT INTO login_log (user_id, username, role) VALUES ($1, $2, $3)',
       [user.id, user.username, user.role]
@@ -73,7 +70,6 @@ app.post('/auth/login', async (req, res) => {
   }
 });
 
-// Change your own password (any logged-in user)
 app.post('/auth/change-password', requireAuth, async (req, res) => {
   const { newPassword } = req.body;
   try {
@@ -85,7 +81,6 @@ app.post('/auth/change-password', requireAuth, async (req, res) => {
   }
 });
 
-// Admin resets anyone's password
 app.post('/auth/reset-password', requireAuth, requireRole('admin'), async (req, res) => {
   const { username, newPassword } = req.body;
   try {
@@ -102,7 +97,7 @@ app.post('/auth/reset-password', requireAuth, requireRole('admin'), async (req, 
     res.status(500).json({ error: err.message });
   }
 });
-// Admin deletes a login (only if not linked to an actual student record, to avoid orphaning data)
+
 app.delete('/auth/users/:username', requireAuth, requireRole('admin'), async (req, res) => {
   const { username } = req.params;
   try {
@@ -121,24 +116,23 @@ app.delete('/auth/users/:username', requireAuth, requireRole('admin'), async (re
     res.status(500).json({ error: err.message });
   }
 });
-// Middleware: verifies the token and attaches user info to the request
+
 function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
     return res.status(401).json({ error: 'No token provided' });
   }
 
-  const token = authHeader.split(' ')[1]; // "Bearer <token>"
+  const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // attach user info (id, username, role, student_id) to the request
-    next(); // proceed to the actual route
+    req.user = decoded;
+    next();
   } catch (err) {
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
 
-// Middleware factory: restricts a route to specific roles
 function requireRole(...allowedRoles) {
   return (req, res, next) => {
     if (!allowedRoles.includes(req.user.role)) {
@@ -147,12 +141,10 @@ function requireRole(...allowedRoles) {
     next();
   };
 }
-// ----- STUDENTS -----
 
 app.post('/students', requireAuth, requireRole('admin'), async (req, res) => {
   const { name, class: studentClass, school, dob, phone1, phone2, father_name, mother_name, address } = req.body;
   try {
-    // Check for a duplicate: same name AND same phone number
     const existing = await pool.query(
       'SELECT id FROM students WHERE name = $1 AND phone1 = $2',
       [name, phone1]
@@ -181,12 +173,7 @@ app.get('/students', requireAuth, requireRole('admin', 'coach'), async (req, res
   }
 });
 
-// ----- IMPORTANT: these /students/self routes MUST come before /students/:id routes below,
-// otherwise Express will match "self" as if it were an :id parameter. -----
-
-// A student fills in their own profile for the first time
 app.post('/students/self', requireAuth, requireRole('student'), async (req, res) => {
-  // Check the database directly, not the token, since tokens can be stale
   const userCheck = await pool.query('SELECT student_id FROM users WHERE id = $1', [req.user.id]);
   if (userCheck.rows[0].student_id) {
     return res.status(400).json({ error: 'Your registration is already complete' });
@@ -194,7 +181,6 @@ app.post('/students/self', requireAuth, requireRole('student'), async (req, res)
   const { name, class: studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no } = req.body;
 
   try {
-    // Duplicate check, same rule as admin registration
     const existing = await pool.query(
       'SELECT id FROM students WHERE name = $1 AND phone1 = $2',
       [name, phone1]
@@ -209,7 +195,6 @@ app.post('/students/self', requireAuth, requireRole('student'), async (req, res)
       [name, studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no]
     );
 
-    // Link this new student record to the logged-in user's own account
     await pool.query('UPDATE users SET student_id = $1 WHERE id = $2', [studentResult.rows[0].id, req.user.id]);
 
     res.status(201).json({ id: studentResult.rows[0].id, message: 'Registration completed successfully' });
@@ -218,7 +203,6 @@ app.post('/students/self', requireAuth, requireRole('student'), async (req, res)
   }
 });
 
-// A student views their own registration
 app.get('/students/self', requireAuth, requireRole('student'), async (req, res) => {
   if (!req.user.student_id) {
     return res.status(404).json({ error: 'No registration found' });
@@ -231,7 +215,6 @@ app.get('/students/self', requireAuth, requireRole('student'), async (req, res) 
   }
 });
 
-// A student edits their own registration, only within 7 days of creating it
 app.put('/students/self', requireAuth, requireRole('student'), async (req, res) => {
   if (!req.user.student_id) {
     return res.status(404).json({ error: 'No registration found' });
@@ -259,7 +242,6 @@ app.put('/students/self', requireAuth, requireRole('student'), async (req, res) 
   }
 });
 
-// Update a student's details (admin)
 app.put('/students/:id', requireAuth, requireRole('admin'), async (req, res) => {
   const { id } = req.params;
   const { name, class: studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no } = req.body;
@@ -275,11 +257,9 @@ app.put('/students/:id', requireAuth, requireRole('admin'), async (req, res) => 
   }
 });
 
-// Delete a student
 app.delete('/students/:id', requireAuth, requireRole('admin'), async (req, res) => {
   const { id } = req.params;
   try {
-    // Clean up related records first, so we don't leave orphaned data
     await pool.query('DELETE FROM batch_students WHERE student_id = $1', [id]);
     await pool.query('DELETE FROM attendance WHERE student_id = $1', [id]);
     await pool.query('DELETE FROM fee_payments WHERE student_id = $1', [id]);
@@ -295,8 +275,6 @@ app.delete('/students/:id', requireAuth, requireRole('admin'), async (req, res) 
     res.status(500).json({ error: err.message });
   }
 });
-
-// ----- COACHES -----
 
 app.post('/coaches', requireAuth, requireRole('admin'), async (req, res) => {
   const { name, phone } = req.body;
@@ -319,13 +297,11 @@ app.get('/coaches', requireAuth, requireRole('admin', 'coach'), async (req, res)
     res.status(500).json({ error: err.message });
   }
 });
-// Delete a coach
+
 app.delete('/coaches/:id', requireAuth, requireRole('admin'), async (req, res) => {
   const { id } = req.params;
   try {
-    // Unassign this coach from any batches first (set to null, don't delete the batch)
     await pool.query('UPDATE batches SET coach_id = NULL WHERE coach_id = $1', [id]);
-    // Unlink any user login tied to this coach (don't delete the login, just the link)
     await pool.query('UPDATE users SET coach_id = NULL WHERE coach_id = $1', [id]);
     await pool.query('DELETE FROM coaches WHERE id = $1', [id]);
     res.json({ message: 'Coach deleted successfully' });
@@ -334,7 +310,53 @@ app.delete('/coaches/:id', requireAuth, requireRole('admin'), async (req, res) =
   }
 });
 
-// ----- BATCHES -----
+app.post('/coach-attendance', requireAuth, requireRole('admin'), async (req, res) => {
+  const { coach_id, date, morning_status, evening_status } = req.body;
+  try {
+    const existing = await pool.query(
+      'SELECT id FROM coach_attendance WHERE coach_id = $1 AND date = $2',
+      [coach_id, date]
+    );
+
+    if (existing.rows.length > 0) {
+      await pool.query(
+        'UPDATE coach_attendance SET morning_status = $1, evening_status = $2 WHERE coach_id = $3 AND date = $4',
+        [morning_status, evening_status, coach_id, date]
+      );
+    } else {
+      await pool.query(
+        'INSERT INTO coach_attendance (coach_id, date, morning_status, evening_status) VALUES ($1, $2, $3, $4)',
+        [coach_id, date, morning_status, evening_status]
+      );
+    }
+    res.json({ message: 'Coach attendance saved' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/coach-attendance/monthly', requireAuth, requireRole('admin'), async (req, res) => {
+  const { coach_id, month } = req.query;
+  try {
+    const result = await pool.query(
+      `SELECT date, morning_status, evening_status
+       FROM coach_attendance
+       WHERE coach_id = $1 AND date LIKE $2
+       ORDER BY date`,
+      [coach_id, `${month}%`]
+    );
+
+    const totalSessionsPresent = result.rows.reduce((count, row) => {
+      if (row.morning_status === 'present') count++;
+      if (row.evening_status === 'present') count++;
+      return count;
+    }, 0);
+
+    res.json({ records: result.rows, totalSessionsPresent });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.post('/batches', requireAuth, requireRole('admin'), async (req, res) => {
   const { name, coach_id } = req.body;
@@ -392,8 +414,6 @@ app.get('/batches/:batchId/students', requireAuth, requireRole('admin', 'coach')
   }
 });
 
-
-// Remove a student from a batch
 app.delete('/batches/:batchId/students/:studentId', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
   const { batchId, studentId } = req.params;
   try {
@@ -406,11 +426,10 @@ app.delete('/batches/:batchId/students/:studentId', requireAuth, requireRole('ad
     res.status(500).json({ error: err.message });
   }
 });
-// Delete a batch
+
 app.delete('/batches/:id', requireAuth, requireRole('admin'), async (req, res) => {
   const { id } = req.params;
   try {
-    // Clean up related records first
     await pool.query('DELETE FROM batch_students WHERE batch_id = $1', [id]);
     await pool.query('DELETE FROM attendance WHERE batch_id = $1', [id]);
     await pool.query('DELETE FROM batches WHERE id = $1', [id]);
@@ -419,14 +438,13 @@ app.delete('/batches/:id', requireAuth, requireRole('admin'), async (req, res) =
     res.status(500).json({ error: err.message });
   }
 });
-// Create a team (must have exactly 12 members)
+
 app.post('/teams', requireAuth, requireRole('admin'), async (req, res) => {
   const { name, coach_id, members } = req.body;
-  // members = [{ student_id, jersey_number }, ...]
 
   if (!members || members.length < 5 || members.length > 12) {
-  return res.status(400).json({ error: 'A team must have between 5 and 12 players' });
-}
+    return res.status(400).json({ error: 'A team must have between 5 and 12 players' });
+  }
 
   const client = await pool.connect();
   try {
@@ -454,7 +472,6 @@ app.post('/teams', requireAuth, requireRole('admin'), async (req, res) => {
   }
 });
 
-// Get all teams
 app.get('/teams', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
   try {
     const result = await pool.query(`
@@ -469,7 +486,6 @@ app.get('/teams', requireAuth, requireRole('admin', 'coach'), async (req, res) =
   }
 });
 
-// Get one team's full roster
 app.get('/teams/:id', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
   const { id } = req.params;
   try {
@@ -492,7 +508,6 @@ app.get('/teams/:id', requireAuth, requireRole('admin', 'coach'), async (req, re
     res.status(500).json({ error: err.message });
   }
 });
-// ----- ATTENDANCE -----
 
 app.post('/attendance', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
   const { batch_id, date, records } = req.body;
@@ -521,13 +536,13 @@ app.get('/attendance/monthly', requireAuth, requireRole('admin', 'coach', 'stude
   const { batch_id, month } = req.query;
   try {
     let query = `
-  SELECT attendance.student_id, students.name, attendance.date, attendance.status,
-         coaches.name AS marked_by_coach
-  FROM attendance
-  JOIN students ON attendance.student_id = students.id
-  LEFT JOIN coaches ON attendance.coach_id = coaches.id
-  WHERE attendance.batch_id = $1 AND attendance.date LIKE $2
-`;
+      SELECT attendance.student_id, students.name, attendance.date, attendance.status,
+             coaches.name AS marked_by_coach
+      FROM attendance
+      JOIN students ON attendance.student_id = students.id
+      LEFT JOIN coaches ON attendance.coach_id = coaches.id
+      WHERE attendance.batch_id = $1 AND attendance.date LIKE $2
+    `;
     const params = [batch_id, `${month}%`];
 
     if (req.user.role === 'student') {
@@ -543,10 +558,10 @@ app.get('/attendance/monthly', requireAuth, requireRole('admin', 'coach', 'stude
     res.status(500).json({ error: err.message });
   }
 });
+
 app.get('/attendance/stats/:studentId', requireAuth, requireRole('admin', 'coach', 'student'), async (req, res) => {
   const { studentId } = req.params;
 
-  // Students can only see their own stats
   if (req.user.role === 'student' && req.user.student_id != studentId) {
     return res.status(403).json({ error: 'Access denied' });
   }
@@ -569,8 +584,6 @@ app.get('/attendance/stats/:studentId', requireAuth, requireRole('admin', 'coach
   }
 });
 
-// ----- FEES -----
-
 app.post('/fees', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
   const { student_id, category, month, amount, paid_date } = req.body;
   try {
@@ -589,7 +602,7 @@ app.get('/fees/status', requireAuth, requireRole('admin', 'coach', 'student'), a
   const { month, category } = req.query;
   try {
     let query = `
-      SELECT students.id AS student_id, students.name, students.class,
+      SELECT students.id AS student_id, students.name, students.class, students.dob,
              fee_payments.amount, fee_payments.paid_date
       FROM students
       LEFT JOIN fee_payments
@@ -625,6 +638,7 @@ app.get('/fees/total', requireAuth, requireRole('admin', 'coach'), async (req, r
     res.status(500).json({ error: err.message });
   }
 });
+
 app.get('/auth/login-log', requireAuth, requireRole('admin'), async (req, res) => {
   try {
     const result = await pool.query(
@@ -641,6 +655,7 @@ app.get('/auth/login-log', requireAuth, requireRole('admin'), async (req, res) =
     res.status(500).json({ error: err.message });
   }
 });
+
 app.get('/auth/students-list', requireAuth, requireRole('admin'), async (req, res) => {
   try {
     const result = await pool.query(`
