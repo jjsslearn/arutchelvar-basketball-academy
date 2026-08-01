@@ -658,12 +658,12 @@ app.get('/attendance/stats/:studentId', requireAuth, requireRole('admin', 'coach
 });
 
 app.post('/fees', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
-  const { student_id, category, month, amount, paid_date } = req.body;
+  const { student_id, category, month, amount, paid_date, payment_mode } = req.body;
   try {
     const result = await pool.query(
-      `INSERT INTO fee_payments (student_id, category, month, amount, paid_date)
-       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [student_id, category, month, amount, paid_date]
+      `INSERT INTO fee_payments (student_id, category, month, amount, paid_date, payment_mode)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+      [student_id, category, month, amount, paid_date, payment_mode]
     );
     res.status(201).json({ id: result.rows[0].id, message: 'Payment recorded successfully' });
   } catch (err) {
@@ -675,9 +675,9 @@ app.get('/fees/status', requireAuth, requireRole('admin', 'coach', 'student'), a
   const { month, category } = req.query;
   try {
     let query = `
-      SELECT students.id AS student_id, students.name, students.class, students.dob,
-             fee_payments.amount, fee_payments.paid_date
-      FROM students
+  SELECT students.id AS student_id, students.name, students.class, students.dob,
+         fee_payments.amount, fee_payments.paid_date, fee_payments.payment_mode
+  FROM students
       LEFT JOIN fee_payments
         ON students.id = fee_payments.student_id
         AND fee_payments.month = $1

@@ -11,6 +11,7 @@ function FeesForm({ user }) {
   const [payDate, setPayDate] = useState('');
   const [payingStudentId, setPayingStudentId] = useState(null);
   const [message, setMessage] = useState('');
+  const [paymentMode, setPaymentMode] = useState('Cash');
 
   useEffect(() => {
     if (month && category) {
@@ -43,41 +44,43 @@ function FeesForm({ user }) {
   return age;
 }
 
-  async function handleMarkPaid(studentId) {
-    setMessage('');
+async function handleMarkPaid(studentId) {
+  setMessage('');
 
-    if (!payAmount || !payDate) {
-      setMessage('Please enter amount and date first.');
-      return;
-    }
-
-    try {
-      const response = await apiFetch('/fees', {
-  method: 'POST',
-  body: JSON.stringify({
-    student_id: studentId,
-    category,
-    month,
-    amount: payAmount,
-    paid_date: payDate
-  })
-});
-      const data = await response.json();
-
-      if (response.ok) {
-        setMessage('Payment recorded!');
-        setPayAmount('');
-        setPayDate('');
-        setPayingStudentId(null);
-        loadStatus();
-        loadTotal();
-      } else {
-        setMessage(`Error: ${data.error}`);
-      }
-    } catch (err) {
-      setMessage('Error: Could not connect to server');
-    }
+  if (!payAmount || !payDate) {
+    setMessage('Please enter amount and date first.');
+    return;
   }
+
+  try {
+    const response = await apiFetch('/fees', {
+      method: 'POST',
+      body: JSON.stringify({
+        student_id: studentId,
+        category,
+        month,
+        amount: payAmount,
+        paid_date: payDate,
+        payment_mode: paymentMode
+      })
+    });
+    const data = await response.json();
+
+    if (response.ok) {
+      setMessage('Payment recorded!');
+      setPayAmount('');
+      setPayDate('');
+      setPaymentMode('Cash');
+      setPayingStudentId(null);
+      loadStatus();
+      loadTotal();
+    } else {
+      setMessage(`Error: ${data.error}`);
+    }
+  } catch (err) {
+    setMessage('Error: Could not connect to server');
+  }
+}
 
   const filteredStudents = students.filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase())
@@ -115,8 +118,13 @@ function FeesForm({ user }) {
 </div>
 
       {month && category && (
-        <>
-          <p><strong>Total Collected: ₹{total}</strong></p>
+  <>
+    <p><strong>Total Collected: ₹{total}</strong></p>
+    <p>
+      <strong>Paid: {students.filter((s) => s.amount !== null).length}</strong>
+      {' | '}
+      <strong>Not Paid: {students.filter((s) => s.amount === null).length}</strong>
+    </p>
 
           <table className="students-table">
   <thead>
@@ -139,29 +147,33 @@ function FeesForm({ user }) {
             <td>{student.dob ? calculateAge(student.dob) : '-'}</td>
             <td>
               {isPaid ? (
-                <span>Paid ₹{student.amount} on {student.paid_date}</span>
-              ) : payingStudentId === student.student_id ? (
-                <span className="pay-inputs">
-                  <input
-                    type="number"
-                    placeholder="Amount"
-                    value={payAmount}
-                    onChange={(e) => setPayAmount(e.target.value)}
-                  />
-                  <input
-                    type="date"
-                    value={payDate}
-                    onChange={(e) => setPayDate(e.target.value)}
-                  />
-                  <button type="button" onClick={() => handleMarkPaid(student.student_id)}>
-                    Confirm
-                  </button>
-                </span>
-              ) : (
-                <button type="button" onClick={() => setPayingStudentId(student.student_id)}>
-                  Mark Paid
-                </button>
-              )}
+  <span>Paid ₹{student.amount} via {student.payment_mode || 'Cash'} on {student.paid_date}</span>
+) : payingStudentId === student.student_id ? (
+  <span className="pay-inputs">
+    <input
+      type="number"
+      placeholder="Amount"
+      value={payAmount}
+      onChange={(e) => setPayAmount(e.target.value)}
+    />
+    <input
+      type="date"
+      value={payDate}
+      onChange={(e) => setPayDate(e.target.value)}
+    />
+    <select value={paymentMode} onChange={(e) => setPaymentMode(e.target.value)}>
+      <option value="Cash">Cash</option>
+      <option value="GPay">GPay</option>
+    </select>
+    <button type="button" onClick={() => handleMarkPaid(student.student_id)}>
+      Confirm
+    </button>
+  </span>
+) : (
+  <button type="button" onClick={() => setPayingStudentId(student.student_id)}>
+    Pay
+  </button>
+)}
             </td>
           </tr>
         );
