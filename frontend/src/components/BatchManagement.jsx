@@ -11,6 +11,7 @@ function BatchManagement() {
   const [assignMessage, setAssignMessage] = useState('');
   const [viewBatchId, setViewBatchId] = useState('');
   const [batchStudents, setBatchStudents] = useState([]);
+  const [batchSession, setBatchSession] = useState('morning');
 
   useEffect(() => {
     loadBatches();
@@ -58,28 +59,43 @@ function BatchManagement() {
   }
 
   async function handleCreateBatch(e) {
-    e.preventDefault();
-    setBatchMessage('');
+  e.preventDefault();
+  setBatchMessage('');
 
-    try {
-      const response = await apiFetch('/batches', {
-        method: 'POST',
-        body: JSON.stringify({ name: batchName, coach_id: null })
-      });
-      const data = await response.json();
+  try {
+    const response = await apiFetch('/batches', {
+      method: 'POST',
+      body: JSON.stringify({ name: batchName, coach_id: null, session: batchSession })
+    });
+    const data = await response.json();
 
-      if (response.ok) {
-        setBatchMessage(`Batch "${batchName}" created!`);
-        setBatchName('');
-        loadBatches();
-      } else {
-        setBatchMessage(`Error: ${data.error}`);
-      }
-    } catch (err) {
-      setBatchMessage('Error: Could not connect to server');
+    if (response.ok) {
+      setBatchMessage(`Batch "${batchName}" (${batchSession}) created!`);
+      setBatchName('');
+      loadBatches();
+    } else {
+      setBatchMessage(`Error: ${data.error}`);
     }
+  } catch (err) {
+    setBatchMessage('Error: Could not connect to server');
   }
-
+}
+async function handleDeleteBatch(id, name) {
+  if (!window.confirm(`Delete batch "${name}"? This removes all its attendance records too.`)) return;
+  try {
+    const response = await apiFetch(`/batches/${id}`, { method: 'DELETE' });
+    const data = await response.json();
+    if (response.ok) {
+      setBatchMessage(`Batch "${name}" deleted`);
+      loadBatches();
+      if (viewBatchId === id) setViewBatchId('');
+    } else {
+      setBatchMessage(`Error: ${data.error}`);
+    }
+  } catch (err) {
+    setBatchMessage('Error: Could not connect to server');
+  }
+}
   async function handleAssignStudent(e) {
     e.preventDefault();
     setAssignMessage('');
@@ -127,10 +143,14 @@ function BatchManagement() {
       <h2>Batch Management</h2>
 
       <h3>Create Batch</h3>
-      <form onSubmit={handleCreateBatch}>
-        <input placeholder="Batch Name" value={batchName} onChange={(e) => setBatchName(e.target.value)} required />
-        <button type="submit">Create Batch</button>
-      </form>
+<form onSubmit={handleCreateBatch}>
+  <input placeholder="Batch Name (e.g. Beginners, Advanced)" value={batchName} onChange={(e) => setBatchName(e.target.value)} required />
+  <select value={batchSession} onChange={(e) => setBatchSession(e.target.value)}>
+    <option value="morning">Morning</option>
+    <option value="evening">Evening</option>
+  </select>
+  <button type="submit">Create Batch</button>
+</form>
       {batchMessage && <p>{batchMessage}</p>}
 
       <h3>Assign Student to Batch</h3>
@@ -151,12 +171,37 @@ function BatchManagement() {
       </form>
       {assignMessage && <p>{assignMessage}</p>}
 
+      <h3>Existing Batches</h3>
+<table className="students-table">
+  <thead>
+    <tr>
+      <th>Batch Name</th>
+      <th>Session</th>
+      <th>Coach</th>
+      <th>Delete</th>
+    </tr>
+  </thead>
+  <tbody>
+    {batches.map((batch) => (
+      <tr key={batch.id}>
+        <td>{batch.name}</td>
+        <td>{batch.session || '-'}</td>
+        <td>{batch.coach_name || 'Unassigned'}</td>
+        <td>
+          <button type="button" onClick={() => handleDeleteBatch(batch.id, batch.name)}>Delete</button>
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+      {assignMessage && <p>{assignMessage}</p>}
+
       <h3>View / Remove Batch Members</h3>
       <select value={viewBatchId} onChange={(e) => setViewBatchId(e.target.value)}>
         <option value="">-- Select Batch --</option>
         {batches.map((batch) => (
-          <option key={batch.id} value={batch.id}>{batch.name}</option>
-        ))}
+  <option key={batch.id} value={batch.id}>{batch.name} ({batch.session})</option>
+      ))}
       </select>
 
       {viewBatchId && (

@@ -359,11 +359,11 @@ app.get('/coach-attendance/monthly', requireAuth, requireRole('admin'), async (r
 });
 
 app.post('/batches', requireAuth, requireRole('admin'), async (req, res) => {
-  const { name, coach_id } = req.body;
+  const { name, coach_id, session } = req.body;
   try {
     const result = await pool.query(
-      'INSERT INTO batches (name, coach_id) VALUES ($1, $2) RETURNING id',
-      [name, coach_id]
+      'INSERT INTO batches (name, coach_id, session) VALUES ($1, $2, $3) RETURNING id',
+      [name, coach_id, session]
     );
     res.status(201).json({ id: result.rows[0].id, message: 'Batch created successfully' });
   } catch (err) {
@@ -374,7 +374,7 @@ app.post('/batches', requireAuth, requireRole('admin'), async (req, res) => {
 app.get('/batches', requireAuth, requireRole('admin', 'coach', 'student'), async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT batches.id, batches.name, coaches.name AS coach_name
+      SELECT batches.id, batches.name, batches.session, coaches.name AS coach_name
       FROM batches
       LEFT JOIN coaches ON batches.coach_id = coaches.id
     `);
@@ -383,11 +383,36 @@ app.get('/batches', requireAuth, requireRole('admin', 'coach', 'student'), async
     res.status(500).json({ error: err.message });
   }
 });
-
 app.post('/batches/:batchId/students', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
   const { batchId } = req.params;
   const { student_id } = req.body;
   try {
+    const existing = await pool.query(
+      'SELECT id FROM batch_students WHERE batch_id = $1 AND student_id = $2',
+      [batchId, student_id]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'This student is already assigned to this batch' });
+    }
+
+    // Check if this student is already in another batch in the same session
+    const targetBatch = await pool.query('SELECT session FROM batches WHERE id = $1', [batchId]);
+    const targetSession = targetBatch.rows[0].session;
+
+    if (targetSession) {
+      const sessionConflict = await pool.query(
+        `SELECT batches.name FROM batch_students
+         JOIN batches ON batch_students.batch_id = batches.id
+         WHERE batch_students.student_id = $1 AND batches.session = $2`,
+        [student_id, targetSession]
+      );
+      if (sessionConflict.rows.length > 0) {
+        return res.status(400).json({
+          error: `This student is already in the "${sessionConflict.rows[0].name}" batch for ${targetSession}. Remove them from that batch first if you want to move them.`
+        });
+      }
+    }
+
     const result = await pool.query(
       'INSERT INTO batch_students (batch_id, student_id) VALUES ($1, $2) RETURNING id',
       [batchId, student_id]
