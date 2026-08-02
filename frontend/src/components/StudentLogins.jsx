@@ -63,6 +63,7 @@ function StudentLogins() {
       <table className="students-table">
   <thead>
     <tr>
+      <th>S.No</th>
       <th>Username</th>
       <th>Student Name</th>
       <th>Action</th>
@@ -71,6 +72,7 @@ function StudentLogins() {
   <tbody>
     {logins.map((l, i) => (
       <tr key={i}>
+        <td>{i + 1}</td>
         <td>{l.username}</td>
         <td>{l.student_name || '(not registered yet)'}</td>
         <td>

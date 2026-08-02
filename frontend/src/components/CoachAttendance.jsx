@@ -11,7 +11,7 @@ function CoachAttendance() {
   const [month, setMonth] = useState('');
   const [records, setRecords] = useState([]);
   const [totalSessionsPresent, setTotalSessionsPresent] = useState(0);
-
+  
   useEffect(() => {
     apiFetch('/coaches').then((r) => r.json()).then(setCoaches);
   }, []);
@@ -31,6 +31,11 @@ function CoachAttendance() {
       })
       .catch((err) => console.error('Error loading coach attendance:', err));
   }
+  function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  const [year, month, day] = dateStr.split('-');
+  return `${day}/${month}/${year}`;
+}
 
   async function handleSave(e) {
     e.preventDefault();
@@ -126,14 +131,14 @@ function CoachAttendance() {
                   </tr>
                 </thead>
                 <tbody>
-                  {records.map((r) => (
-                    <tr key={r.date}>
-                      <td>{r.date}</td>
-                      <td>{r.morning_status || '-'}</td>
-                      <td>{r.evening_status || '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
+          {records.map((r) => (
+              <tr key={r.date}>
+              <td>{formatDate(r.date)}</td>
+              <td>{r.morning_status || '-'}</td>
+              <td>{r.evening_status || '-'}</td>
+              </tr>
+          ))}
+</tbody>
               </table>
             </>
           )}
