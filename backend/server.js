@@ -7,6 +7,13 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const Razorpay = require('razorpay');
+const crypto = require('crypto');
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET
+});
 
 app.use(cors());
 app.use(express.json());
@@ -666,6 +673,59 @@ app.post('/fees', requireAuth, requireRole('admin', 'coach'), async (req, res) =
       [student_id, category, month, amount, paid_date, payment_mode]
     );
     res.status(201).json({ id: result.rows[0].id, message: 'Payment recorded successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// Student creates a payment order for a fee they want to pay
+app.post('/payments/create-order', requireAuth, requireRole('student'), async (req, res) => {
+  const { amount, category, month } = req.body;
+
+  if (!req.user.student_id) {
+    return res.status(400).json({ error: 'Complete your registration first' });
+  }
+
+  try {
+    const order = await razorpay.orders.create({
+      amount: Math.round(amount * 100), // Razorpay uses paise, not rupees
+      currency: 'INR',
+      receipt: `fee_${req.user.student_id}_${Date.now()}`
+    });
+
+    res.json({
+      orderId: order.id,
+      amount: order.amount,
+      keyId: process.env.RAZORPAY_KEY_ID
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Verify payment and record it after successful checkout
+app.post('/payments/verify', requireAuth, requireRole('student'), async (req, res) => {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, amount, category, month } = req.body;
+
+  try {
+    // Verify the payment is genuine using Razorpay's signature check
+    const generatedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest('hex');
+
+    if (generatedSignature !== razorpay_signature) {
+      return res.status(400).json({ error: 'Payment verification failed' });
+    }
+
+    // Signature matches - payment is genuine, record it
+    const today = new Date().toISOString().split('T')[0];
+    const result = await pool.query(
+      `INSERT INTO fee_payments (student_id, category, month, amount, paid_date, payment_mode)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+      [req.user.student_id, category, month, amount, today, 'Online (Razorpay)']
+    );
+
+    res.status(201).json({ id: result.rows[0].id, message: 'Payment successful and recorded' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
