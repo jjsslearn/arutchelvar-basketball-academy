@@ -8,6 +8,7 @@ function AttendanceForm() {
   const [students, setStudents] = useState([]);
   const [attendance, setAttendance] = useState({});
   const [message, setMessage] = useState('');
+  const [newStudentsCount, setNewStudentsCount] = useState(0);
 
   useEffect(() => {
     apiFetch('/batches')
@@ -54,35 +55,40 @@ function AttendanceForm() {
   }
 
   async function handleSaveAttendance() {
-    setMessage('');
+  setMessage('');
 
-    if (!selectedBatch || !date) {
-      setMessage('Please select a batch and date first.');
-      return;
-    }
-
-    const records = students.map((student) => ({
-      student_id: student.id,
-      status: attendance[student.id]
-    }));
-
-    try {
-      const response = await apiFetch('/attendance', {
-  method: 'POST',
-  body: JSON.stringify({ batch_id: selectedBatch, date, records })
-});
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setMessage('Attendance saved successfully!');
-      } else {
-        setMessage(`Error: ${data.error}`);
-      }
-    } catch (err) {
-      setMessage('Error: Could not connect to server');
-    }
+  if (!selectedBatch || !date) {
+    setMessage('Please select a batch and date first.');
+    return;
   }
+
+  const records = students.map((student) => ({
+    student_id: student.id,
+    status: attendance[student.id]
+  }));
+
+  try {
+    const response = await apiFetch('/attendance', {
+      method: 'POST',
+      body: JSON.stringify({ batch_id: selectedBatch, date, records })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      // Also save the walk-in/new student count for this class
+      await apiFetch('/class-summary', {
+        method: 'POST',
+        body: JSON.stringify({ batch_id: selectedBatch, date, new_students_count: newStudentsCount || 0 })
+      });
+      setMessage('Attendance saved successfully!');
+    } else {
+      setMessage(`Error: ${data.error}`);
+    }
+  } catch (err) {
+    setMessage('Error: Could not connect to server');
+  }
+}
 
   return (
     <div>
@@ -93,10 +99,10 @@ function AttendanceForm() {
         <select value={selectedBatch} onChange={(e) => setSelectedBatch(e.target.value)}>
           <option value="">-- Choose a batch --</option>
           {batches.map((batch) => (
-            <option key={batch.id} value={batch.id}>
-              {batch.name} (Coach: {batch.coach_name})
-            </option>
-          ))}
+  <option key={batch.id} value={batch.id}>
+    {batch.name}
+  </option>
+))}
         </select>
       </label>
 
@@ -138,7 +144,19 @@ function AttendanceForm() {
           ))}
       </tbody>
     </table>
-    <button type="button" onClick={handleSaveAttendance}>Save Attendance</button>
+    <div>
+  <label>
+    New Students (walk-ins):
+    <input
+      type="number"
+      min="0"
+      value={newStudentsCount}
+      onChange={(e) => setNewStudentsCount(parseInt(e.target.value) || 0)}
+    />
+  </label>
+  <p><strong>Total Students Attended: {Object.values(attendance).filter((s) => s === 'present').length + newStudentsCount}</strong></p>
+</div>
+<button type="button" onClick={handleSaveAttendance}>Save Attendance</button>
   </div>
 )}
 

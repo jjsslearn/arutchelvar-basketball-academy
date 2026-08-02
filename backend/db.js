@@ -133,6 +133,15 @@ await pool.query(`
     evening_status TEXT
   )
 `);
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS class_summary (
+    id SERIAL PRIMARY KEY,
+    batch_id INTEGER NOT NULL REFERENCES batches(id),
+    date TEXT NOT NULL,
+    new_students_count INTEGER DEFAULT 0,
+    coach_id INTEGER REFERENCES coaches(id)
+  )
+`);
 // Add new columns if they don't already exist (for databases created before this update)
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS coach_id INTEGER REFERENCES coaches(id)`);
 await pool.query(`ALTER TABLE attendance ADD COLUMN IF NOT EXISTS coach_id INTEGER REFERENCES coaches(id)`);

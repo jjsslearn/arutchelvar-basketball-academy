@@ -177,7 +177,6 @@ async function handleDeleteBatch(id, name) {
     <tr>
       <th>Batch Name</th>
       <th>Session</th>
-      <th>Coach</th>
       <th>Delete</th>
     </tr>
   </thead>
@@ -186,7 +185,6 @@ async function handleDeleteBatch(id, name) {
       <tr key={batch.id}>
         <td>{batch.name}</td>
         <td>{batch.session || '-'}</td>
-        <td>{batch.coach_name || 'Unassigned'}</td>
         <td>
           <button type="button" onClick={() => handleDeleteBatch(batch.id, batch.name)}>Delete</button>
         </td>
@@ -194,7 +192,7 @@ async function handleDeleteBatch(id, name) {
     ))}
   </tbody>
 </table>
-      {assignMessage && <p>{assignMessage}</p>}
+     
 
       <h3>View / Remove Batch Members</h3>
       <select value={viewBatchId} onChange={(e) => setViewBatchId(e.target.value)}>

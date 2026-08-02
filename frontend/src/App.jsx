@@ -9,11 +9,11 @@ import CoachManagement from './components/CoachManagement';
 import FeesForm from './components/FeesForm';
 import PrintCards from './components/PrintCards';
 import AttendanceReport from './components/AttendanceReport';
-import LoginLog from './components/LoginLog';
 import TeamSelection from './components/TeamSelection';
 import ChangePassword from './components/ChangePassword';
 import StudentLogins from './components/StudentLogins';
 import CoachAttendance from './components/CoachAttendance';
+import DailyAttendanceReport from './components/DailyAttendanceReport';
 function App() {
   const [user, setUser] = useState(null);
   const [view, setView] = useState('dashboard');
@@ -98,8 +98,8 @@ if (user.role === 'student' && !user.student_id) {
           {(user.role === 'admin' || user.role === 'coach' || user.role === 'student') && (
             <button onClick={() => setView('attendanceReport')}>Attendance Report</button>
           )}
-          {(user.role === 'admin') && (
-            <button onClick={() => setView('loginLog')}>Coach Login Log</button>
+          {(user.role === 'admin' || user.role === 'coach') && (
+            <button onClick={() => setView('dailyReport')}>Daily Attendance Report</button>
           )}
           {(user.role === 'admin') && (
             <button onClick={() => setView('teamSelection')}>Select Team</button>
@@ -121,7 +121,7 @@ if (user.role === 'student' && !user.student_id) {
       {view === 'fees' && <FeesForm user={user} />}
       {view === 'printCards' && <PrintCards />}
       {view === 'attendanceReport' && <AttendanceReport user={user} />}
-      {view === 'loginLog' && <LoginLog />}
+      {view === 'dailyReport' && <DailyAttendanceReport />}
       {view === 'teamSelection' && <TeamSelection />}
       {view === 'myRegistration' && <SelfRegistration onComplete={() => {}} />}
       {view === 'changePassword' && <ChangePassword />}

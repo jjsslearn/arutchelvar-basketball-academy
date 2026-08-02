@@ -663,7 +663,120 @@ app.get('/attendance/stats/:studentId', requireAuth, requireRole('admin', 'coach
     res.status(500).json({ error: err.message });
   }
 });
+// Save the "new/walk-in student" count for a batch's class on a given date
+app.post('/class-summary', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
+  const { batch_id, date, new_students_count } = req.body;
+  const markedByCoachId = req.user.coach_id || null;
 
+  try {
+    const existing = await pool.query(
+      'SELECT id FROM class_summary WHERE batch_id = $1 AND date = $2',
+      [batch_id, date]
+    );
+
+    if (existing.rows.length > 0) {
+      await pool.query(
+        'UPDATE class_summary SET new_students_count = $1, coach_id = $2 WHERE batch_id = $3 AND date = $4',
+        [new_students_count, markedByCoachId, batch_id, date]
+      );
+    } else {
+      await pool.query(
+        'INSERT INTO class_summary (batch_id, date, new_students_count, coach_id) VALUES ($1, $2, $3, $4)',
+        [batch_id, date, new_students_count, markedByCoachId]
+      );
+    }
+    res.json({ message: 'Class summary saved' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Report: total students attended per date (present count + new students), for a batch + month
+app.get('/class-summary/report', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
+  const { batch_id, month } = req.query;
+  try {
+    const presentCounts = await pool.query(
+      `SELECT date, COUNT(*) AS present_count
+       FROM attendance
+       WHERE batch_id = $1 AND status = 'present' AND date LIKE $2
+       GROUP BY date`,
+      [batch_id, `${month}%`]
+    );
+
+    const newStudentCounts = await pool.query(
+      `SELECT date, new_students_count, coaches.name AS coach_name
+       FROM class_summary
+       LEFT JOIN coaches ON class_summary.coach_id = coaches.id
+       WHERE batch_id = $1 AND date LIKE $2`,
+      [batch_id, `${month}%`]
+    );
+
+    // Merge both by date
+    const newStudentsByDate = {};
+    newStudentCounts.rows.forEach((row) => {
+      newStudentsByDate[row.date] = { count: row.new_students_count, coach: row.coach_name };
+    });
+    // Report: total students attended per session (morning/evening), across all batches, per date
+app.get('/class-summary/daily-report', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
+  const { month } = req.query;
+  try {
+    const presentCounts = await pool.query(
+      `SELECT attendance.date, batches.session, COUNT(*) AS present_count
+       FROM attendance
+       JOIN batches ON attendance.batch_id = batches.id
+       WHERE attendance.status = 'present' AND attendance.date LIKE $1
+       GROUP BY attendance.date, batches.session`,
+      [`${month}%`]
+    );
+
+    const newStudentCounts = await pool.query(
+      `SELECT class_summary.date, batches.session, SUM(class_summary.new_students_count) AS new_count
+       FROM class_summary
+       JOIN batches ON class_summary.batch_id = batches.id
+       WHERE class_summary.date LIKE $1
+       GROUP BY class_summary.date, batches.session`,
+      [`${month}%`]
+    );
+
+    // Build a lookup: { date: { morning: total, evening: total } }
+    const totals = {};
+
+    presentCounts.rows.forEach((row) => {
+      if (!totals[row.date]) totals[row.date] = {};
+      totals[row.date][row.session] = (totals[row.date][row.session] || 0) + parseInt(row.present_count);
+    });
+
+    newStudentCounts.rows.forEach((row) => {
+      if (!totals[row.date]) totals[row.date] = {};
+      totals[row.date][row.session] = (totals[row.date][row.session] || 0) + parseInt(row.new_count || 0);
+    });
+
+    const report = Object.keys(totals).sort().map((date) => ({
+      date,
+      morningTotal: totals[date].morning ?? null,
+      eveningTotal: totals[date].evening ?? null
+    }));
+
+    res.json(report);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+    const report = presentCounts.rows.map((row) => ({
+      date: row.date,
+      presentCount: parseInt(row.present_count),
+      newStudents: newStudentsByDate[row.date]?.count || 0,
+      coach: newStudentsByDate[row.date]?.coach || null,
+      total: parseInt(row.present_count) + (newStudentsByDate[row.date]?.count || 0)
+    }));
+
+    res.json(report);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 app.post('/fees', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
   const { student_id, category, month, amount, paid_date, payment_mode } = req.body;
   try {
