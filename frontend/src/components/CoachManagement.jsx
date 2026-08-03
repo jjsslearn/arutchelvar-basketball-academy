@@ -105,14 +105,28 @@ function CoachManagement() {
       {coachMessage && <p>{coachMessage}</p>}
 
       <h4>Existing Coaches:</h4>
-      <ul className="student-list">
-        {coaches.map((coach) => (
-          <li key={coach.id}>
-            <span>{coach.name} — {coach.phone}</span>
-            <button type="button" onClick={() => handleDeleteCoach(coach.id, coach.name)}>Delete</button>
-          </li>
-        ))}
-      </ul>
+<table className="students-table">
+  <thead>
+    <tr>
+      <th>S.No</th>
+      <th>Name</th>
+      <th>Phone</th>
+      <th>Delete</th>
+    </tr>
+  </thead>
+  <tbody>
+    {coaches.map((coach, index) => (
+      <tr key={coach.id}>
+        <td>{index + 1}</td>
+        <td>{coach.name}</td>
+        <td>{coach.phone}</td>
+        <td>
+          <button type="button" onClick={() => handleDeleteCoach(coach.id, coach.name)}>Delete</button>
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
     </div>
   );
 }
