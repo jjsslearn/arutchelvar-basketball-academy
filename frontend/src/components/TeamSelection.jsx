@@ -45,6 +45,16 @@ function TeamSelection() {
       prev.map((p) => (p.student_id === studentId ? { ...p, jersey_number: value } : p))
     );
   }
+  function calculateAge(dob) {
+  const birthDate = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
 
   async function handleSaveTeam(e) {
     e.preventDefault();
@@ -156,15 +166,37 @@ async function handleRemovePlayer(studentId, studentName) {
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      <ul className="student-list">
-        {filteredStudents.map((s) => {
-          const isSelected = selectedPlayers.some((p) => p.student_id === s.id);
-          return (
-            <li key={s.id}>
-              <label>
-                <input type="checkbox" checked={isSelected} onChange={() => togglePlayer(s)} />
-                {s.name} ({s.class})
-              </label>
+      <table className="students-table">
+  <thead>
+    <tr>
+      <th>S.No</th>
+      <th>Name</th>
+      <th>Age</th>
+      <th>Gender</th>
+      <th>Select</th>
+      <th>Jersey #</th>
+    </tr>
+  </thead>
+  <tbody>
+    {[...filteredStudents]
+      .sort((a, b) => {
+        // Group by gender first, then sort by age within each group
+        const genderCompare = (a.gender || '').localeCompare(b.gender || '');
+        if (genderCompare !== 0) return genderCompare;
+        return new Date(b.dob) - new Date(a.dob);
+      })
+      .map((s, index) => {
+        const isSelected = selectedPlayers.some((p) => p.student_id === s.id);
+        return (
+          <tr key={s.id}>
+            <td>{index + 1}</td>
+            <td>{s.name}</td>
+            <td>{s.dob ? calculateAge(s.dob) : '-'}</td>
+            <td>{s.gender || '-'}</td>
+            <td>
+              <input type="checkbox" checked={isSelected} onChange={() => togglePlayer(s)} />
+            </td>
+            <td>
               {isSelected && (
                 <input
                   placeholder="Jersey #"
@@ -172,18 +204,15 @@ async function handleRemovePlayer(studentId, studentName) {
                   onChange={(e) => updateJersey(s.id, e.target.value)}
                 />
               )}
-            </li>
-          );
-        })}
-      </ul>
+            </td>
+          </tr>
+        );
+      })}
+  </tbody>
+</table>
 
       <form onSubmit={handleSaveTeam}>
-        <input
-          placeholder="Team Name"
-          value={teamName}
-          onChange={(e) => setTeamName(e.target.value)}
-          required
-        />
+        <input placeholder="Team Name" value={teamName} onChange={(e) => setTeamName(e.target.value)}required/>
         <select value={selectedCoachId} onChange={(e) => setSelectedCoachId(e.target.value)}>
           <option value="">-- Select Coach (optional) --</option>
           {coaches.map((c) => (

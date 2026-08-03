@@ -8,7 +8,7 @@ function SelfRegistration({ onComplete }) {
   const [formData, setFormData] = useState({
     name: '', class: '', school: '', dob: '',
     phone1: '', phone2: '', father_name: '', mother_name: '', address: '',
-    email: '', aadhaar_no: ''
+    email: '', aadhaar_no: '', gender: ''
   });
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -108,6 +108,13 @@ function SelfRegistration({ onComplete }) {
           <input name="address" placeholder="Address" value={formData.address || ''} onChange={handleChange} />
           <input name="email" type="email" placeholder="Email" value={formData.email || ''} onChange={handleChange} />
           <input name="aadhaar_no" placeholder="Aadhaar Number" value={formData.aadhaar_no || ''} onChange={handleChange} />
+          <label>Gender:
+          <select name="gender" value={formData.gender || ''} onChange={handleChange} required>
+            <option value="">-- Select --</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+          </select>
+        </label>
 
           <button type="submit" disabled={submitting}>{submitting ? 'Submitting...' : (isFirstTime ? 'Submit Registration' : 'Save Changes')}</button>
           {!isFirstTime && (
@@ -127,6 +134,7 @@ function SelfRegistration({ onComplete }) {
           <p><strong>Address:</strong> {student.address}</p>
           <p><strong>Email:</strong> {student.email}</p>
           <p><strong>Aadhaar Number:</strong> {student.aadhaar_no}</p>
+          <p><strong>Gender:</strong> {student.gender}</p>
 
           {canEdit && <button type="button" onClick={() => setEditing(true)}>Edit</button>}
         </div>

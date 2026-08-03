@@ -60,7 +60,7 @@ function StudentForm() {
       name: student.name, class: student.class, school: student.school, dob: student.dob,
       phone1: student.phone1 || '', phone2: student.phone2 || '',
       father_name: student.father_name || '', mother_name: student.mother_name || '',
-      address: student.address || '', email: student.email || '', aadhaar_no: student.aadhaar_no || ''
+      address: student.address || '', email: student.email || '', aadhaar_no: student.aadhaar_no || '', gender: student.gender || ''
     });
   }
 
@@ -147,6 +147,7 @@ function StudentForm() {
                     <input name="address" value={editData.address} onChange={handleEditChange} placeholder="Address" />
                     <input name="email" value={editData.email} onChange={handleEditChange} placeholder="Email" />
                     <input name="aadhaar_no" value={editData.aadhaar_no} onChange={handleEditChange} placeholder="Aadhaar Number" />
+                    <input name="gender" value={editData.gender} onChange={handleEditChange} placeholder="gender" />
                     <button type="button" onClick={() => handleUpdate(s.id)}>Save</button>
                     <button type="button" onClick={() => setEditingId(null)}>Cancel</button>
                   </div>

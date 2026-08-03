@@ -150,6 +150,7 @@ await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS aadhaar_no TEXT`
 await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()`);
 await pool.query(`ALTER TABLE batches ADD COLUMN IF NOT EXISTS session TEXT`);
 await pool.query(`ALTER TABLE fee_payments ADD COLUMN IF NOT EXISTS payment_mode TEXT`);
+await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS gender TEXT`);
 console.log('All tables ready.');
 }
 

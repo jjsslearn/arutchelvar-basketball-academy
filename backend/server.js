@@ -185,7 +185,7 @@ app.post('/students/self', requireAuth, requireRole('student'), async (req, res)
   if (userCheck.rows[0].student_id) {
     return res.status(400).json({ error: 'Your registration is already complete' });
   }
-  const { name, class: studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no } = req.body;
+  const { name, class: studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no, gender } = req.body;
 
   try {
     const existing = await pool.query(
@@ -197,10 +197,10 @@ app.post('/students/self', requireAuth, requireRole('student'), async (req, res)
     }
 
     const studentResult = await pool.query(
-      `INSERT INTO students (name, class, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
-      [name, studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no]
-    );
+  `INSERT INTO students (name, class, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no, gender)
+   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
+  [name, studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no, gender]
+);
 
     await pool.query('UPDATE users SET student_id = $1 WHERE id = $2', [studentResult.rows[0].id, req.user.id]);
 
@@ -227,21 +227,21 @@ app.put('/students/self', requireAuth, requireRole('student'), async (req, res) 
     return res.status(404).json({ error: 'No registration found' });
   }
 
-  const { name, class: studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no } = req.body;
+  const { name, class: studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no, gender } = req.body;
 
   try {
     const check = await pool.query('SELECT created_at FROM students WHERE id = $1', [req.user.student_id]);
     const createdAt = new Date(check.rows[0].created_at);
     const daysSince = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
 
-    if (daysSince > 7) {
+    if (daysSince > 31) {
       return res.status(403).json({ error: 'Edit window has expired. Please contact admin for changes.' });
     }
 
     await pool.query(
       `UPDATE students SET name = $1, class = $2, school = $3, dob = $4, phone1 = $5,
-       phone2 = $6, father_name = $7, mother_name = $8, address = $9, email = $10, aadhaar_no = $11 WHERE id = $12`,
-      [name, studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no, req.user.student_id]
+       phone2 = $6, father_name = $7, mother_name = $8, address = $9, email = $10, aadhaar_no = $11, gender = $12 WHERE id = $13`,
+      [name, studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no, gender, req.user.student_id]
     );
     res.json({ message: 'Registration updated successfully' });
   } catch (err) {
@@ -251,13 +251,14 @@ app.put('/students/self', requireAuth, requireRole('student'), async (req, res) 
 
 app.put('/students/:id', requireAuth, requireRole('admin'), async (req, res) => {
   const { id } = req.params;
-  const { name, class: studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no } = req.body;
+  const { name, class: studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no, gender } = req.body;
   try {
     await pool.query(
       `UPDATE students SET name = $1, class = $2, school = $3, dob = $4, phone1 = $5,
-       phone2 = $6, father_name = $7, mother_name = $8, address = $9, email = $10, aadhaar_no = $11 WHERE id = $12`,
-      [name, studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no, id]
+       phone2 = $6, father_name = $7, mother_name = $8, address = $9, email = $10, aadhaar_no = $11, gender = $12 WHERE id = $13`,
+      [name, studentClass, school, dob, phone1, phone2, father_name, mother_name, address, email, aadhaar_no, gender, id]
     );
+    
     res.json({ message: 'Student updated successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -711,12 +712,25 @@ app.get('/class-summary/report', requireAuth, requireRole('admin', 'coach'), asy
       [batch_id, `${month}%`]
     );
 
-    // Merge both by date
     const newStudentsByDate = {};
     newStudentCounts.rows.forEach((row) => {
       newStudentsByDate[row.date] = { count: row.new_students_count, coach: row.coach_name };
     });
-    // Report: total students attended per session (morning/evening), across all batches, per date
+
+    const report = presentCounts.rows.map((row) => ({
+      date: row.date,
+      presentCount: parseInt(row.present_count),
+      newStudents: newStudentsByDate[row.date]?.count || 0,
+      coach: newStudentsByDate[row.date]?.coach || null,
+      total: parseInt(row.present_count) + (newStudentsByDate[row.date]?.count || 0)
+    }));
+
+    res.json(report);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/class-summary/daily-report', requireAuth, requireRole('admin', 'coach'), async (req, res) => {
   const { month } = req.query;
   try {
@@ -738,7 +752,6 @@ app.get('/class-summary/daily-report', requireAuth, requireRole('admin', 'coach'
       [`${month}%`]
     );
 
-    // Build a lookup: { date: { morning: total, evening: total } }
     const totals = {};
 
     presentCounts.rows.forEach((row) => {
@@ -755,21 +768,6 @@ app.get('/class-summary/daily-report', requireAuth, requireRole('admin', 'coach'
       date,
       morningTotal: totals[date].morning ?? null,
       eveningTotal: totals[date].evening ?? null
-    }));
-
-    res.json(report);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-
-    const report = presentCounts.rows.map((row) => ({
-      date: row.date,
-      presentCount: parseInt(row.present_count),
-      newStudents: newStudentsByDate[row.date]?.count || 0,
-      coach: newStudentsByDate[row.date]?.coach || null,
-      total: parseInt(row.present_count) + (newStudentsByDate[row.date]?.count || 0)
     }));
 
     res.json(report);
