@@ -123,23 +123,25 @@ function CoachAttendance() {
             <>
               <p><strong>Total Sessions Present: {totalSessionsPresent}</strong></p>
               <table className="students-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Morning</th>
-                    <th>Evening</th>
-                  </tr>
-                </thead>
-                <tbody>
-          {records.map((r) => (
-              <tr key={r.date}>
-              <td>{formatDate(r.date)}</td>
-              <td>{r.morning_status || '-'}</td>
-              <td>{r.evening_status || '-'}</td>
-              </tr>
-          ))}
-</tbody>
-              </table>
+  <thead>
+    <tr>
+      <th>S.No</th>
+      <th>Date</th>
+      <th>Morning</th>
+      <th>Evening</th>
+    </tr>
+  </thead>
+  <tbody>
+    {records.map((r, index) => (
+      <tr key={r.date}>
+        <td>{index + 1}</td>
+        <td>{formatDate(r.date)}</td>
+        <td>{r.morning_status || '-'}</td>
+        <td>{r.evening_status || '-'}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
             </>
           )}
         </>
